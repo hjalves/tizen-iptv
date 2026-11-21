@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1920, user-scalable=no">
-<title>M3UPT TV</title>
+<title>IP TV</title>
 <link rel="stylesheet" href="css/style.css">
 <!-- Samsung product API (AVPlay). Resolved by the TV runtime; harmless 404 elsewhere. -->
 <script src="$WEBAPIS/webapis/webapis.js"></script>
@@ -18,7 +18,7 @@
 
   <div id="browser">
     <div id="header">
-      <div id="brand">M3UPT <span>TV</span></div>
+      <div id="brand">IP <span>TV</span></div>
       <div id="status"></div>
       <div id="clock"></div>
     </div>
@@ -50,7 +50,7 @@
     </div>
 
     <div id="footer">
-      <span class="key"><b class="dot red"></b>Favourite</span>
+      <span class="key"><b class="dot red"></b><span id="red-label">Favourite</span></span>
       <span class="key"><b class="dot green"></b>Reload playlist</span>
       <span class="key"><b class="dot yellow"></b>Stop</span>
       <span class="key"><b class="dot blue"></b>Last channel</span>
@@ -74,6 +74,7 @@
   <div id="loading"><div class="spinner"></div><div id="loading-text">Loading playlist…</div></div>
 </div>
 
+<script src="js/settings.js"></script>
 <script src="js/util.js"></script>
 <script src="js/m3u.js"></script>
 <script src="js/player.js"></script>

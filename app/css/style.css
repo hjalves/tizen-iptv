@@ -56,6 +56,9 @@ body.fullscreen #browser { display: none; }
 .g-name { position: absolute; left: 20px; top: 13px; right: 90px; overflow: hidden; text-overflow: ellipsis; }
 .g-count { position: absolute; right: 18px; top: 15px; font-size: 24px; color: #8c97ab; }
 .panel.active .row.sel .g-count { color: #e6f2ff; }
+.row.hidden-group .g-name, .row.hidden-group .g-count { opacity: 0.5; font-style: italic; }
+.row.toggle-row .g-name { font-size: 24px; color: #8c97ab; top: 16px; }
+.panel.active .row.sel.toggle-row .g-name { color: #fff; }
 
 /* channel rows */
 #channel-rows .row { height: 76px; }

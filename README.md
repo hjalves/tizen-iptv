@@ -1,6 +1,6 @@
-# M3UPT TV — IPTV player for Samsung Tizen 2.4 TVs
+# IP TV — IPTV player for Samsung Tizen 2.4 TVs
 
-A Tizen web app (2016 Samsung TVs, e.g. the K series) that loads the
+A Tizen web app ("IP TV"; package ID `M3uptTvApp`) for 2016 Samsung TVs, e.g. the K series. It loads the
 [M3UPT](https://github.com/LITUATUI/M3UPT) playlist and plays its live TV and radio streams.
 
 ## Features
@@ -9,6 +9,7 @@ A Tizen web app (2016 Samsung TVs, e.g. the K series) that loads the
 - OK plays the channel full screen. Back returns to the list and the channel keeps playing in the preview.
 - Full screen: CH+ (or Up) goes to the next, higher-numbered channel and CH− (or Down) to the previous one, within the group you started from, OK or Info shows the banner, and Play/Pause pauses.
 - Number keys jump to a channel by its number in the playlist. Red adds or removes a favourite, Green reloads the playlist, Yellow or Stop stops playback, and Blue or PRE-CH returns to the last channel.
+- Groups can be hidden: in the Groups column, Red hides or unhides the selected group. Hidden groups disappear from the list, from "All channels" and from zapping, and number entry refuses their channels. The last row, "Show hidden groups", lists them dimmed so they can be unhidden. The defaults are in `app/js/settings.js` (currently Beachcam, Eixo do Mal, PCNELID, IEGCQT, 100 ou Mais, O Planeta Vivo); a change made on the TV is saved there until the app is reinstalled.
 - Logos for the playlist are bundled under `app/logos/` and load locally. If a logo isn't there, it loads from GitHub, and if that fails the row shows the channel's initials.
 - `.pls` radio links are resolved to the real stream. The playlist's `#EXTVLCOPT:http-user-agent` (desktop Firefox) is ignored: RTP returns 404 for it, while the TV's own user-agent works everywhere.
 
@@ -25,7 +26,7 @@ A Tizen web app (2016 Samsung TVs, e.g. the K series) that loads the
 - The 27 entries whose URL is commented out in the playlist are disabled upstream and are skipped.
 
 ## Icon
-`app/icon.png` is a 512×288 (16:9) full-bleed launcher image rendered from `art/icon.svg`
+`app/icon.png` is a 512×288 (16:9) full-bleed launcher image (play badge + "IP TV" wordmark in Noto Sans Black) rendered from `art/icon.svg`
 (`rsvg-convert -w 512 -h 288 -o app/icon.png art/icon.svg`). The 2016 home bar and favourites tile are
 landscape, so a square or 512×423 icon gets stretched there (same approach as the apps in samsung-tv).
 

@@ -57,6 +57,32 @@ var MOCK = function () {
   await key('Escape'); await key('1'); await key('0'); await key('0'); await p.waitForTimeout(2200);
   await p.screenshot({ path: shots + '/7-number.png' });
   var ev = await p.evaluate(function () { var s = App._state(); return { sel: s.groups[s.gSel].name + '#' + (s.cSel + 1), av: window.__av }; });
+  // ---- hidden groups ----
+  var names = async function () { return p.evaluate(function () { return App._state().groups.map(function (g) { return g.name + ':' + g.items.length; }); }); };
+  var g0 = await names();
+  console.log('groups (defaults hide 6):', g0.join(', '));
+  if (g0.join().indexOf('Eixo do Mal') >= 0 || g0.join().indexOf('Beachcam') >= 0 || g0[g0.length - 1].indexOf('Show hidden groups (6)') !== 0) { throw new Error('default hidden groups not applied'); }
+  if (g0[1] !== 'All channels:244') { throw new Error('All channels should exclude hidden groups: ' + g0[1]); }
+  await key('ArrowLeft'); await key('ArrowUp', 12); await key('ArrowDown', 3);              // Rádios
+  await key('r'); await p.waitForTimeout(300);
+  var g1 = await names();
+  if (g1.join().indexOf('Rádios') >= 0 || g1[1] !== 'All channels:159') { throw new Error('hide failed: ' + g1.join()); }
+  var st1 = await p.evaluate(function () { return document.getElementById('status').textContent; });
+  if (st1.indexOf('159 channels · 1 group (+7 hidden)') !== 0) { throw new Error('status not updated after hiding: ' + st1); }
+  await key('ArrowDown', 12); await key('Enter'); await p.waitForTimeout(300);            // show hidden
+  var g2 = await names();
+  await p.screenshot({ path: shots + '/8-hidden-groups.png' });
+  if (g2.length !== 11 || g2[g2.length - 1].indexOf('Hide hidden groups (7)') !== 0) { throw new Error('show hidden failed: ' + g2.join()); }
+  var bIdx = g2.findIndex(function (n) { return n.indexOf('Rádios') === 0; });
+  await key('ArrowUp', 12); await key('ArrowDown', bIdx); await key('r'); await p.waitForTimeout(300);  // unhide Rádios
+  var g3 = await names();
+  if (g3[1] !== 'All channels:244') { throw new Error('unhide failed: ' + g3.join()); }
+  await key('Escape'); await key('4'); await key('0'); await key('0'); await p.waitForTimeout(2200);
+  var t = await p.evaluate(function () { return document.getElementById('toast').textContent; });
+  if (t.indexOf('hidden group') < 0) { throw new Error('number entry into hidden group should be refused: ' + t); }
+  var st2 = await p.evaluate(function () { return document.getElementById('status').textContent; });
+  if (st2.indexOf('244 channels · 2 groups (+6 hidden)') !== 0) { throw new Error('status not updated: ' + st2); }
+  console.log('hidden groups OK; status:', await p.evaluate(function () { return document.getElementById('status').textContent; }));
   console.log('cursor after "100":', ev.sel);
   console.log(ev.av.join('\n'));
   console.log('page errors:', errors.length ? errors : 'none');

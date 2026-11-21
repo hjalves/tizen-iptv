@@ -1,4 +1,4 @@
-/* M3UPT TV — main UI (ES5, Tizen 2.4). */
+/* IP TV — main UI (ES5, Tizen 2.4). */
 (function (global) {
   'use strict';
 
@@ -16,6 +16,14 @@
   var all = [];                 // every channel, playlist order
   var groups = [];              // [{name, items}]
   var favs = U.store.get('favs', {});
+  var hidden = U.store.get('hiddenGroups', null);   // {groupName: 1}; null → defaults from settings.js
+  if (!hidden) {
+    hidden = {};
+    var defHidden = (global.SETTINGS && global.SETTINGS.hiddenGroups) || [];
+    for (var hi = 0; hi < defHidden.length; hi++) { hidden[defHidden[hi]] = 1; }
+  }
+  var showHidden = false;       // hidden groups listed (dimmed) so they can be unhidden
+  var visible = [];             // channels not in hidden groups ("All channels", zapping)
   var gSel = 0, gTop = 0;       // group cursor
   var cSel = 0, cTop = 0;       // channel cursor in current group
   var zone = 'channels';        // 'groups' | 'channels'
@@ -24,6 +32,7 @@
   var zapList = null;           // list used for CH+/- in full screen
   var bannerTimer = null, toastTimer = null, numTimer = null, numBuf = '';
   var playState = 'stopped', playDetail = null;
+  var playlistSource = '';
 
   var gRows = [], cRows = [];
 
@@ -85,14 +94,23 @@
 
   /* ---------- data ---------- */
   function rebuildGroups(keepName) {
-    var byName = {}, list = [], i, ch, favItems = [];
+    var byName = {}, list = [], hiddenList = [], i, ch, g, favItems = [];
+    visible = [];
     for (i = 0; i < all.length; i++) {
       ch = all[i];
-      if (!byName[ch.group]) { byName[ch.group] = { name: ch.group, items: [] }; list.push(byName[ch.group]); }
+      if (!byName[ch.group]) {
+        g = byName[ch.group] = { name: ch.group, items: [], hidden: !!hidden[ch.group] };
+        (g.hidden ? hiddenList : list).push(g);
+      }
       byName[ch.group].items.push(ch);
+      if (!hidden[ch.group]) { visible.push(ch); }
       if (favs[ch.key]) { favItems.push(ch); }
     }
-    groups = [{ name: GROUP_FAV, items: favItems, fav: true }, { name: GROUP_ALL, items: all }].concat(list);
+    groups = [{ name: GROUP_FAV, items: favItems, fav: true }, { name: GROUP_ALL, items: visible }].concat(list);
+    if (hiddenList.length) {
+      if (showHidden) { groups = groups.concat(hiddenList); }
+      groups.push({ name: (showHidden ? 'Hide' : 'Show') + ' hidden groups (' + hiddenList.length + ')', items: [], toggle: true });
+    }
     gSel = -1;
     for (i = 0; i < groups.length; i++) { if (groups[i].name === keepName) { gSel = i; } }
     if (gSel < 0) { gSel = favItems.length ? 0 : 1; }
@@ -114,8 +132,7 @@
       rebuildGroups(keepGroup);
       selectByKey(keepKey);
       $('loading').className = '';
-      U.text($('status'), all.length + ' channels · ' + (groups.length - 2) + ' groups · ' + source +
-        ' · player: ' + (Player.engine === 'avplay' ? 'AVPlay' : 'HTML5'));
+      playlistSource = source;
       renderAll();
       return true;
     }
@@ -170,10 +187,15 @@
       row.el.style.display = g ? '' : 'none';
       if (!g) { continue; }
       U.text(row.name, (g.fav ? '★ ' : '') + g.name);
-      U.text(row.count, g.items.length);
+      U.text(row.count, g.toggle ? '' : (g.hidden ? 'hidden' : g.items.length));
       U.toggleClass(row.el, 'sel', gTop + i === gSel);
+      U.toggleClass(row.el, 'hidden-group', !!g.hidden);
+      U.toggleClass(row.el, 'toggle-row', !!g.toggle);
     }
     U.toggleClass($('groups'), 'active', zone === 'groups' && !fullscreen);
+    var cg = groups[gSel] || {};
+    U.text($('red-label'), zone !== 'groups' ? 'Favourite' :
+      (cg.fav || cg.name === GROUP_ALL || cg.toggle ? '—' : (cg.hidden ? 'Unhide group' : 'Hide group')));
   }
 
   function tagsHtml(ch, big) {
@@ -191,7 +213,8 @@
     U.text($('channels-title'), groups[gSel] ? groups[gSel].name : '');
     U.text($('channels-pos'), n ? (cSel + 1) + ' / ' + n : '');
     $('channels-empty').style.display = n ? 'none' : 'block';
-    U.text($('channels-empty'), groups[gSel] && groups[gSel].fav ? 'No favourites yet — press the red button on a channel' : 'No channels');
+    U.text($('channels-empty'), groups[gSel] && groups[gSel].fav ? 'No favourites yet — press the red button on a channel' :
+      (groups[gSel] && groups[gSel].toggle ? 'Press OK to ' + (showHidden ? 'hide' : 'show') + ' the hidden groups' : 'No channels'));
     for (i = 0; i < cRows.length; i++) {
       row = cRows[i]; ch = items[cTop + i];
       row.el.style.display = ch ? '' : 'none';
@@ -259,7 +282,18 @@
     U.text($('banner-msg'), msg);
   }
 
-  function renderAll() { clampScroll(); renderGroups(); renderChannels(); renderDetails(); }
+  function renderStatus() {
+    if (!all.length) { return; }
+    var nGroups = 0, nHidden = 0, gi, gname, seen = {};
+    for (gi = 0; gi < all.length; gi++) {
+      gname = all[gi].group;
+      if (!seen[gname]) { seen[gname] = 1; if (hidden[gname]) { nHidden++; } else { nGroups++; } }
+    }
+    U.text($('status'), visible.length + ' channels · ' + nGroups + (nGroups === 1 ? ' group' : ' groups') + (nHidden ? ' (+' + nHidden + ' hidden)' : '') +
+      ' · ' + playlistSource + ' · player: ' + (Player.engine === 'avplay' ? 'AVPlay' : 'HTML5'));
+  }
+
+  function renderAll() { clampScroll(); renderStatus(); renderGroups(); renderChannels(); renderDetails(); }
 
   /* ---------- playback / full screen ---------- */
   function onPlayerState(s, detail) {
@@ -274,7 +308,7 @@
     if (!ch) { return; }
     if (playing && playing !== ch) { lastPlayed = playing; }
     playing = ch;
-    zapList = list || zapList || all;
+    zapList = list || zapList || visible;
     U.toggleClass(document.body, 'radio', !!ch.radio);
     U.store.set('last', ch.key);
     Player.play(ch);
@@ -285,7 +319,7 @@
      only once the key presses settle. */
   var zapTimer = null;
   function zap(delta) {
-    var list = zapList || all, idx = list.indexOf(playing), ch;
+    var list = zapList || visible, idx = list.indexOf(playing), ch;
     if (!list.length) { return; }
     idx = idx < 0 ? 0 : (idx + delta + list.length) % list.length;
     ch = list[idx];
@@ -342,7 +376,7 @@
     if (!ch) { return; }
     U.text($('banner-num'), ch.num);
     U.text($('banner-name'), ch.name);
-    var list = zapList || all, idx = list.indexOf(ch);
+    var list = zapList || visible, idx = list.indexOf(ch);
     U.text($('banner-sub'), ch.group + (idx >= 0 ? '   ·   ' + (idx + 1) + ' of ' + list.length : '') +
       (favs[ch.key] ? '   ·   ★' : ''));
     setLogo($('banner-img'), ch);
@@ -382,12 +416,13 @@
     numBuf = '';
     $('numentry').style.display = 'none';
     if (!ch) { toast('No channel ' + n); return; }
+    if (hidden[ch.group]) { toast('Channel ' + n + ' is in a hidden group (' + ch.group + ')'); return; }
     if (fullscreen) {
-      startChannel(ch, all);
+      startChannel(ch, visible);
       syncCursorTo(ch);
       showBanner(true);
     } else {
-      gSel = 1; cSel = n - 1; zone = 'channels';
+      gSel = 1; cSel = visible.indexOf(ch); zone = 'channels';
       renderAll();
     }
   }
@@ -403,6 +438,26 @@
     selectByKey(keepKey);
     renderAll();
     if (fullscreen) { showBanner(true); }
+  }
+
+  /* ---------- hidden groups ---------- */
+  function toggleHidden(g) {
+    if (!g || g.fav || g.toggle || g.name === GROUP_ALL) { return; }
+    if (hidden[g.name]) { delete hidden[g.name]; toast('"' + g.name + '" is visible again'); }
+    else { hidden[g.name] = 1; toast('"' + g.name + '" hidden'); }
+    U.store.set('hiddenGroups', hidden);
+    var keep = hidden[g.name] && !showHidden ? GROUP_ALL : g.name;
+    rebuildGroups(keep);
+    cSel = 0; cTop = 0;
+    renderAll();
+  }
+
+  function toggleShowHidden() {
+    showHidden = !showHidden;
+    rebuildGroups(null);
+    gSel = groups.length - 1;               // stay on the toggle row
+    cSel = 0; cTop = 0;
+    renderAll();
   }
 
   /* ---------- keys ---------- */
@@ -427,16 +482,21 @@
         if (zone === 'channels') { zone = 'groups'; }
         break;
       case 'RIGHT':
-        if (zone === 'groups') { zone = 'channels'; }
+        if (zone === 'groups' && !(groups[gSel] && groups[gSel].toggle)) { zone = 'channels'; }
         break;
       case 'ENTER':
-        if (zone === 'groups') { zone = 'channels'; break; }
+        if (zone === 'groups') {
+          if (groups[gSel] && groups[gSel].toggle) { toggleShowHidden(); return; }
+          zone = 'channels'; break;
+        }
         if (!items[cSel]) { break; }
         if (items[cSel] !== playing || playState === 'error' || playState === 'ended') { startChannel(items[cSel], items); }
         else { zapList = items; }
         enterFullscreen();
         return;
-      case 'RED': toggleFav(items[cSel]); return;
+      case 'RED':
+        if (zone === 'groups') { toggleHidden(groups[gSel]); } else { toggleFav(items[cSel]); }
+        return;
       case 'YELLOW': case 'STOP': stopPlayback(); return;
       case 'BLUE': case 'PREV_CH':
         if (lastPlayed) { var lp = lastPlayed; syncCursorTo(lp); startChannel(lp, curItems()); }
