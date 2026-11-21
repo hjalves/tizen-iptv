@@ -85,6 +85,22 @@ var MOCK = function () {
   console.log('hidden groups OK; status:', await p.evaluate(function () { return document.getElementById('status').textContent; }));
   console.log('cursor after "100":', ev.sel);
   console.log(ev.av.join('\n'));
+  // ---- themes ----
+  await key('ArrowRight'); await key('i'); await p.waitForTimeout(300);
+  var themeIds = await p.evaluate(function () { return Themes.list.map(function (t) { return t.id; }); });
+  for (var ti = 0; ti < themeIds.length; ti++) {
+    if (ti) { await key('ArrowDown'); await p.waitForTimeout(250); }
+    var cur = await p.evaluate(function () { return Themes.current(); });
+    if (cur !== themeIds[ti]) { throw new Error('preview should apply ' + themeIds[ti] + ', got ' + cur); }
+    await p.screenshot({ path: shots + '/theme-' + cur + '.png' });
+  }
+  await key('Escape'); await p.waitForTimeout(200);
+  var back = await p.evaluate(function () { return [Themes.current(), localStorage.getItem('theme')]; });
+  if (back[0] !== 'midnight' || back[1] !== null) { throw new Error('Back should restore midnight without saving: ' + back); }
+  await key('i'); await key('ArrowDown'); await key('Enter'); await p.waitForTimeout(200);
+  var kept = await p.evaluate(function () { return [Themes.current(), localStorage.getItem('theme')]; });
+  if (kept[0] !== 'sunset' || kept[1] !== '"sunset"') { throw new Error('OK should keep sunset: ' + kept); }
+  console.log('themes OK:', themeIds.join(', '));
   console.log('page errors:', errors.length ? errors : 'none');
   await b.close(); srv.close();
 })().catch(function (e) { console.error(e); process.exit(1); });

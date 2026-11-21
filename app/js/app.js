@@ -2,7 +2,7 @@
 (function (global) {
   'use strict';
 
-  var U = global.U, M3U = global.M3U, Player = global.Player, KEY = U.KEY, $ = U.$;
+  var U = global.U, M3U = global.M3U, Player = global.Player, Themes = global.Themes, KEY = U.KEY, $ = U.$;
 
   var PLAYLIST_URL = 'https://raw.githubusercontent.com/LITUATUI/M3UPT/main/M3U/M3UPT.m3u';
   var BUNDLED_URL = 'data/M3UPT.m3u';
@@ -460,6 +460,65 @@
     renderAll();
   }
 
+  /* ---------- theme picker ---------- */
+  var picker = { open: false, sel: 0, orig: null, rows: [] };
+
+  function buildPicker() {
+    var wrap = $('tp-rows'), i, t, r;
+    for (i = 0; i < Themes.list.length; i++) {
+      t = Themes.list[i];
+      r = document.createElement('div');
+      r.className = 'tp-row';
+      r.innerHTML = '<span class="tp-sw"><span style="background:' + t.bg + '"></span><span style="background:' + t.panel +
+        '"></span><span style="background:' + t.accent + '"></span></span><span class="tp-name"></span><span class="tp-cur"></span>';
+      U.text(r.childNodes[1], t.name);
+      wrap.appendChild(r);
+      picker.rows.push(r);
+    }
+  }
+
+  function renderPicker() {
+    var i, saved = U.store.get('theme', null) || picker.orig;
+    for (i = 0; i < picker.rows.length; i++) {
+      U.toggleClass(picker.rows[i], 'sel', i === picker.sel);
+      U.text(picker.rows[i].childNodes[2], Themes.list[i].id === saved ? '✓' : '');
+    }
+  }
+
+  function openPicker() {
+    var i;
+    picker.open = true;
+    picker.orig = Themes.current();
+    picker.sel = 0;
+    for (i = 0; i < Themes.list.length; i++) { if (Themes.list[i].id === picker.orig) { picker.sel = i; } }
+    $('theme-picker').className = 'show';
+    renderPicker();
+    var tp = $('theme-picker');
+    tp.style.top = Math.max(20, Math.round((1080 - tp.offsetHeight) / 2)) + 'px';   // centre vertically
+  }
+
+  function closePicker(keep) {
+    picker.open = false;
+    $('theme-picker').className = '';
+    if (keep) {
+      U.store.set('theme', Themes.current());
+      toast('Theme: ' + Themes.list[picker.sel].name);
+    } else {
+      Themes.apply(picker.orig);
+    }
+  }
+
+  function onKeyPicker(k) {
+    var n = Themes.list.length;
+    if (k === 'UP') { picker.sel = (picker.sel - 1 + n) % n; }
+    else if (k === 'DOWN') { picker.sel = (picker.sel + 1) % n; }
+    else if (k === 'ENTER') { closePicker(true); return; }
+    else if (k === 'RETURN' || k === 'INFO') { closePicker(false); return; }
+    else { return; }
+    Themes.apply(Themes.list[picker.sel].id);           // live preview
+    renderPicker();
+  }
+
   /* ---------- keys ---------- */
   function onKeyBrowser(k) {
     var items = curItems(), n = items.length;
@@ -504,6 +563,7 @@
       case 'PLAYPAUSE': case 'PLAY': case 'PAUSE':
         if (playing) { enterFullscreen(); }
         return;
+      case 'INFO': openPicker(); return;
       case 'RETURN':
         if (zone === 'channels' && playing) { stopPlayback(); return; }
         if (zone === 'channels') { zone = 'groups'; break; }
@@ -543,6 +603,7 @@
       else if (k === 'RETURN') { exitApp(); }
       return;
     }
+    if (picker.open) { onKeyPicker(k); return; }
     if (/^[0-9]$/.test(k)) { numberKey(k); return; }
     if (k === 'GREEN') { loadPlaylist(true); return; }
     if (fullscreen) { onKeyFullscreen(k); } else { onKeyBrowser(k); }
@@ -561,8 +622,10 @@
 
   /* ---------- start ---------- */
   function init() {
+    Themes.apply(U.store.get('theme', null) || (global.SETTINGS && global.SETTINGS.theme) || 'midnight');
     U.registerKeys();
     buildRows();
+    buildPicker();
     Player.init($('av-holder'), $('html5-player'), onPlayerState);
     Player.setRect(PREVIEW.x, PREVIEW.y, PREVIEW.w, PREVIEW.h);
     document.addEventListener('keydown', onKey, false);

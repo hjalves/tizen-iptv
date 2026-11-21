@@ -131,6 +131,20 @@ body.fullscreen.radio #radio-art { display: block; }
   background: rgba(30, 40, 60, 0.95); border-radius: 10px; text-align: center; font-size: 28px;
 }
 
+/* theme picker (colours come from themes.js) */
+#theme-picker {
+  display: none; position: absolute; left: 660px; top: 100px; width: 600px; padding: 26px 0 22px 0;
+  border-radius: 14px; border: 3px solid transparent;
+}
+#theme-picker.show { display: block; }
+#theme-picker .tp-title { padding: 0 34px 14px 34px; font-size: 24px; text-transform: uppercase; letter-spacing: 2px; }
+#theme-picker .tp-row { position: relative; height: 56px; margin: 0 16px; border-radius: 8px; }
+#theme-picker .tp-sw { position: absolute; left: 20px; top: 11px; width: 102px; height: 34px; border-radius: 6px; overflow: hidden; }
+#theme-picker .tp-sw span { float: left; width: 34px; height: 34px; }
+#theme-picker .tp-name { position: absolute; left: 146px; top: 11px; font-size: 28px; }
+#theme-picker .tp-cur { position: absolute; right: 24px; top: 13px; font-size: 26px; }
+#theme-picker .tp-help { padding: 16px 34px 0 34px; font-size: 22px; }
+
 #loading { display: none; position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #0b0f17; text-align: center; }
 #loading.show { display: block; }
 #loading-text { font-size: 34px; color: #8c97ab; }
