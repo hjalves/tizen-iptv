@@ -1,0 +1,18 @@
+{
+  "name": "m3upt-tv",
+  "version": "1.0.0",
+  "description": "Tizen 2.4 IPTV player for the M3UPT playlist",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "test": "node test/es5-check.js && node test/m3u.test.js && node test/ui.test.js",
+    "build": "tools/build.sh"
+  },
+  "type": "commonjs",
+  "devDependencies": {
+    "acorn": "^8.19.0",
+    "playwright-core": "^1.65.1"
+  },
+  "private": true
+}

@@ -1,0 +1,140 @@
+/* Layout is fixed at 1920x1080 (the Tizen TV web app resolution).
+   Deliberately old-school CSS for the 2016 WebKit: absolute positioning,
+   no flexbox/grid, no custom properties, -webkit- prefixes. */
+
+html, body {
+  margin: 0; padding: 0;
+  width: 1920px; height: 1080px;
+  overflow: hidden;
+  background: #0b0f17;
+  color: #e8ecf3;
+  font-family: "SamsungOne", "Samsung Sans", "Helvetica Neue", Arial, sans-serif;
+  font-size: 30px;
+  -webkit-user-select: none;
+}
+/* Full screen: let the video plane underneath show through. */
+body.fullscreen, body.fullscreen #stage { background: transparent; }
+
+#stage { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; overflow: hidden; background: #0b0f17; }
+
+#av-player, #html5-player {
+  position: absolute; left: 0; top: 0; width: 0; height: 0;
+  background: transparent;
+}
+#html5-player { display: none; background: #000; }
+
+/* ---------- browser view ---------- */
+#browser { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; }
+body.fullscreen #browser { display: none; }
+
+#header { position: absolute; left: 60px; top: 30px; width: 1800px; height: 70px; }
+#brand { position: absolute; left: 0; top: 0; font-size: 46px; font-weight: bold; letter-spacing: 1px; color: #fff; }
+#brand span { color: #2f9bff; }
+#status { position: absolute; left: 330px; top: 16px; width: 1200px; font-size: 26px; color: #8c97ab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#clock { position: absolute; right: 0; top: 4px; font-size: 40px; color: #fff; }
+
+.panel { position: absolute; top: 120px; height: 840px; background: #121826; border-radius: 10px; overflow: hidden; }
+.panel-title { position: absolute; left: 24px; top: 14px; right: 24px; height: 40px; font-size: 24px; color: #8c97ab; text-transform: uppercase; letter-spacing: 2px; white-space: nowrap; overflow: hidden; }
+#channels-pos { position: absolute; right: 0; top: 0; text-transform: none; letter-spacing: 0; }
+.rows { position: absolute; left: 0; top: 64px; right: 0; bottom: 12px; overflow: hidden; }
+
+#groups { left: 60px; width: 400px; }
+#channels { left: 480px; width: 760px; }
+
+.row {
+  position: absolute; left: 12px; right: 12px; height: 70px;
+  border-radius: 8px; overflow: hidden; white-space: nowrap;
+  border: 3px solid transparent;
+}
+.row.sel { background: #1f2a40; }
+.panel.active .row.sel { background: #2f9bff; color: #fff; border-color: #9fd0ff; }
+.row.playing .r-name { color: #6fe39b; }
+.panel.active .row.sel.playing .r-name { color: #fff; }
+
+/* group rows */
+#group-rows .row { height: 64px; }
+.g-name { position: absolute; left: 20px; top: 13px; right: 90px; overflow: hidden; text-overflow: ellipsis; }
+.g-count { position: absolute; right: 18px; top: 15px; font-size: 24px; color: #8c97ab; }
+.panel.active .row.sel .g-count { color: #e6f2ff; }
+
+/* channel rows */
+#channel-rows .row { height: 76px; }
+.r-num { position: absolute; left: 14px; top: 20px; width: 70px; text-align: right; font-size: 26px; color: #8c97ab; }
+.panel.active .row.sel .r-num { color: #e6f2ff; }
+.r-logo { position: absolute; left: 100px; top: 6px; width: 104px; height: 58px; background: #0b0f17; border-radius: 6px; overflow: hidden; text-align: center; }
+.r-logo img { max-width: 96px; max-height: 50px; margin-top: 4px; }
+.r-initials { position: absolute; left: 0; top: 14px; width: 104px; text-align: center; font-size: 24px; font-weight: bold; color: #5d6a82; }
+.r-name { position: absolute; left: 222px; top: 18px; right: 110px; overflow: hidden; text-overflow: ellipsis; }
+.r-tags { position: absolute; right: 12px; top: 20px; font-size: 22px; }
+
+.tag { display: inline-block; padding: 2px 8px; margin-left: 6px; border-radius: 4px; font-size: 20px; font-weight: bold; background: #2a3550; color: #c9d3e6; }
+.tag.fav { background: #d4a514; color: #1a1300; }
+.tag.drm { background: #7a2a2a; color: #ffd6d6; }
+.tag.radio { background: #22553a; color: #c9f5da; }
+
+#scrollbar { position: absolute; right: 4px; top: 70px; bottom: 18px; width: 5px; background: #1b2232; border-radius: 3px; }
+#scrollthumb { position: absolute; left: 0; width: 5px; background: #4a5a7a; border-radius: 3px; }
+#channels-empty { display: none; position: absolute; left: 0; right: 0; top: 380px; text-align: center; color: #5d6a82; }
+
+/* details / preview */
+#details { position: absolute; left: 1260px; top: 120px; width: 600px; height: 840px; }
+#preview { position: absolute; left: 0; top: 0; width: 600px; height: 338px; border-radius: 10px; background: #000; overflow: hidden; }
+body.playing #preview { background: transparent; }
+#preview-art { position: absolute; left: 0; top: 0; width: 600px; height: 338px; text-align: center; }
+#preview-art img { max-width: 360px; max-height: 200px; margin-top: 69px; }
+#preview-msg { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 18px; font-size: 24px; background: rgba(0, 0, 0, 0.65); display: none; }
+
+#info { position: absolute; left: 0; top: 362px; width: 600px; height: 478px; background: #121826; border-radius: 10px; }
+#info-num, #info-name, #info-group, #info-tags { position: relative; margin: 0 30px; }
+#info-num { padding-top: 26px; font-size: 26px; color: #2f9bff; font-weight: bold; height: 34px; }
+#info-name { margin-top: 10px; font-size: 42px; font-weight: bold; line-height: 52px; max-height: 156px; overflow: hidden; }
+#info-group { margin-top: 12px; font-size: 26px; color: #8c97ab; }
+#info-tags { margin: 22px 24px 0 24px; }
+#info-help { position: absolute; left: 30px; bottom: 26px; right: 30px; font-size: 22px; color: #5d6a82; line-height: 30px; }
+
+#footer { position: absolute; left: 60px; top: 990px; width: 1800px; height: 50px; font-size: 24px; color: #8c97ab; white-space: nowrap; }
+.key { margin-right: 46px; }
+.dot { display: inline-block; width: 22px; height: 22px; border-radius: 4px; margin-right: 10px; vertical-align: -3px; }
+.dot.red { background: #e5383b; } .dot.green { background: #2fbf55; }
+.dot.yellow { background: #f0c419; } .dot.blue { background: #2f7bff; }
+.num { display: inline-block; padding: 0 8px; margin-right: 10px; border: 2px solid #8c97ab; border-radius: 4px; font-size: 20px; }
+
+/* ---------- full-screen overlays ---------- */
+#radio-art { display: none; position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #0b0f17; text-align: center; }
+#radio-art img { max-width: 600px; max-height: 400px; margin-top: 260px; }
+#radio-name { margin-top: 40px; font-size: 48px; font-weight: bold; }
+body.fullscreen.radio #radio-art { display: block; }
+
+#banner {
+  display: none; position: absolute; left: 80px; bottom: 60px; width: 1760px; height: 170px;
+  background: rgba(11, 15, 23, 0.88); border-radius: 12px; border-top: 4px solid #2f9bff;
+}
+#banner.show { display: block; }
+#banner-num { position: absolute; left: 36px; top: 52px; width: 120px; font-size: 56px; font-weight: bold; color: #2f9bff; }
+#banner-logo { position: absolute; left: 170px; top: 25px; width: 210px; height: 118px; background: #000; border-radius: 8px; text-align: center; overflow: hidden; }
+#banner-logo img { max-width: 196px; max-height: 104px; margin-top: 7px; }
+#banner-text { position: absolute; left: 410px; top: 30px; right: 520px; }
+#banner-name { font-size: 50px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#banner-sub { margin-top: 10px; font-size: 28px; color: #8c97ab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#banner-msg { position: absolute; right: 36px; top: 30px; width: 470px; text-align: right; font-size: 28px; color: #c9d3e6; line-height: 38px; }
+
+#numentry {
+  display: none; position: absolute; right: 80px; top: 60px; min-width: 150px; padding: 10px 30px;
+  background: rgba(11, 15, 23, 0.9); border-radius: 10px; border: 3px solid #2f9bff;
+  font-size: 80px; font-weight: bold; text-align: center; color: #fff;
+}
+#toast {
+  display: none; position: absolute; left: 660px; top: 60px; width: 600px; padding: 18px 20px;
+  background: rgba(30, 40, 60, 0.95); border-radius: 10px; text-align: center; font-size: 28px;
+}
+
+#loading { display: none; position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; background: #0b0f17; text-align: center; }
+#loading.show { display: block; }
+#loading-text { font-size: 34px; color: #8c97ab; }
+.spinner {
+  width: 80px; height: 80px; margin: 420px auto 40px auto;
+  border: 8px solid #1f2a40; border-top-color: #2f9bff; border-radius: 50%;
+  -webkit-animation: spin 0.9s linear infinite; animation: spin 0.9s linear infinite;
+}
+@-webkit-keyframes spin { from { -webkit-transform: rotate(0deg); } to { -webkit-transform: rotate(360deg); } }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

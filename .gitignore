@@ -1,0 +1,4 @@
+node_modules/
+build/
+test/shots/
+tools/sdb-dl/

@@ -1,0 +1,4 @@
+#!/bin/sh
+# Run Tizen's x86-64 sdb on this aarch64 VM via qemu-user with a private x86-64 sysroot.
+d="$(cd "$(dirname "$0")" && pwd)/sdb-dl"
+exec qemu-x86_64 -L "$d/sysroot" "$d/data/tools/sdb" "$@"

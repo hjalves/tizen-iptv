@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, user-scalable=no">
+<title>M3UPT TV</title>
+<link rel="stylesheet" href="css/style.css">
+<!-- Samsung product API (AVPlay). Resolved by the TV runtime; harmless 404 elsewhere. -->
+<script src="$WEBAPIS/webapis/webapis.js"></script>
+</head>
+<body>
+<div id="stage">
+
+  <!-- Video plane: player.js puts the AVPlay <object> in #av-holder on the TV;
+       AVPlay draws under the web layer where that object sits. -->
+  <div id="av-holder"></div>
+  <video id="html5-player"></video>
+
+  <div id="browser">
+    <div id="header">
+      <div id="brand">M3UPT <span>TV</span></div>
+      <div id="status"></div>
+      <div id="clock"></div>
+    </div>
+
+    <div id="groups" class="panel">
+      <div class="panel-title">Groups</div>
+      <div id="group-rows" class="rows"></div>
+    </div>
+
+    <div id="channels" class="panel">
+      <div class="panel-title"><span id="channels-title">Channels</span><span id="channels-pos"></span></div>
+      <div id="channel-rows" class="rows"></div>
+      <div id="scrollbar"><div id="scrollthumb"></div></div>
+      <div id="channels-empty">No channels</div>
+    </div>
+
+    <div id="details">
+      <div id="preview">
+        <div id="preview-art"><img id="preview-logo" alt=""></div>
+        <div id="preview-msg"></div>
+      </div>
+      <div id="info">
+        <div id="info-num"></div>
+        <div id="info-name"></div>
+        <div id="info-group"></div>
+        <div id="info-tags"></div>
+        <div id="info-help">OK: watch &nbsp;·&nbsp; Back from full screen keeps it playing here</div>
+      </div>
+    </div>
+
+    <div id="footer">
+      <span class="key"><b class="dot red"></b>Favourite</span>
+      <span class="key"><b class="dot green"></b>Reload playlist</span>
+      <span class="key"><b class="dot yellow"></b>Stop</span>
+      <span class="key"><b class="dot blue"></b>Last channel</span>
+      <span class="key"><b class="num">0-9</b>Channel number</span>
+    </div>
+  </div>
+
+  <!-- Full-screen overlays -->
+  <div id="radio-art"><img id="radio-logo" alt=""><div id="radio-name"></div></div>
+  <div id="banner">
+    <div id="banner-num"></div>
+    <div id="banner-logo"><img id="banner-img" alt=""></div>
+    <div id="banner-text">
+      <div id="banner-name"></div>
+      <div id="banner-sub"></div>
+    </div>
+    <div id="banner-msg"></div>
+  </div>
+  <div id="numentry"></div>
+  <div id="toast"></div>
+  <div id="loading"><div class="spinner"></div><div id="loading-text">Loading playlist…</div></div>
+</div>
+
+<script src="js/util.js"></script>
+<script src="js/m3u.js"></script>
+<script src="js/player.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
