@@ -1,4 +1,4 @@
-/* IP TV — main UI (ES5, Tizen 2.4). */
+/* IPTV — main UI (ES5, Tizen 2.4). */
 (function (global) {
   'use strict';
 
@@ -580,8 +580,8 @@
 
   function onKeyFullscreen(k) {
     switch (k) {
-      case 'UP': case 'CH_UP': zap(1); return;      // CH+ = next (higher-numbered) channel
-      case 'DOWN': case 'CH_DOWN': zap(-1); return;
+      case 'CH_UP': case 'DOWN': zap(1); return;    // CH+ and Down: next (higher-numbered) channel
+      case 'CH_DOWN': case 'UP': zap(-1); return;   // CH- and Up: previous channel, like moving in the list
       case 'ENTER': case 'INFO':
         if (U.hasClass($('banner'), 'show')) { hideBanner(); } else { showBanner(true); }
         return;
