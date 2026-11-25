@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=1920, user-scalable=no">
+<!-- Send no Referer: RTP answers 204 (empty) to foreign referrers. "never" is the legacy
+     keyword the 2016 WebKit knows; current browsers map it to no-referrer. -->
+<meta name="referrer" content="never">
 <title>IP TV</title>
 <link rel="stylesheet" href="css/style.css">
 <!-- Samsung product API (AVPlay). Resolved by the TV runtime; harmless 404 elsewhere. -->
@@ -84,6 +87,7 @@
 <script src="js/util.js"></script>
 <script src="js/themes.js"></script>
 <script src="js/m3u.js"></script>
+<script src="js/cenc.js"></script>
 <script src="js/player.js"></script>
 <script src="js/app.js"></script>
 </body>

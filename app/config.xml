@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <widget xmlns="http://www.w3.org/ns/widgets" xmlns:tizen="http://tizen.org/ns/widgets"
-        id="http://tizen-iptv.local/M3uptTvApp" version="1.0.16" viewmodes="maximized">
+        id="http://tizen-iptv.local/M3uptTvApp" version="1.0.21" viewmodes="maximized">
     <tizen:application id="M3uptTvApp.M3UPTTV" package="M3uptTvApp" required_version="2.4"/>
     <tizen:profile name="tv-samsung"/>
     <tizen:metadata key="http://samsung.com/tv/metadata/devel.api.version" value="2.4"/>

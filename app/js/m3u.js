@@ -4,6 +4,7 @@
      #EXTGRP:Group
      #EXTVLCOPT:http-user-agent= / http-referrer= / http-origin=
      #KODIPROP:inputstream.adaptive.license_type= / license_key=
+     #KODIPROP:inputstream.adaptive.drm_legacy=<type>|<key>  and  drm={"<type>":{...}}
    Any other '#' line is a comment (this includes commented-out stream URLs). */
 (function (global) {
   'use strict';
@@ -31,6 +32,16 @@
     name = comma >= 0 ? rest.substring(comma + 1) : rest;
     name = name.replace(/^\s+|\s+$/g, '');
     return { duration: duration, attrs: attrs, name: name };
+  }
+
+  function parseDrmJson(entry, val) {
+    var o, t, ids, k, keys = [];
+    try { o = JSON.parse(val); } catch (e) { entry.drmType = 'unknown'; return; }
+    for (t in o) { if (o.hasOwnProperty(t)) { break; } }
+    entry.drmType = t || 'unknown';
+    ids = o[t] && o[t].license && o[t].license.keyids;
+    if (ids) { for (k in ids) { if (ids.hasOwnProperty(k)) { keys.push(k + ':' + ids[k]); } } }
+    entry.drmKey = keys.join(',');
   }
 
   function parse(text) {
@@ -77,6 +88,12 @@
             val = unquote(line.substring(idx + 1));
             if (key === 'inputstream.adaptive.license_type') { pending.drmType = val; }
             else if (key === 'inputstream.adaptive.license_key') { pending.drmKey = val; }
+            else if (key === 'inputstream.adaptive.drm_legacy') {      // <type>|<key or licence URL>
+              pending.drmType = val.split('|')[0];
+              pending.drmKey = val.substring(pending.drmType.length + 1);
+            } else if (key === 'inputstream.adaptive.drm') {           // {"<type>": {...}}
+              parseDrmJson(pending, val);
+            }
           }
         }
         continue;

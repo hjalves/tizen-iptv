@@ -14,6 +14,12 @@ assert.strictEqual(t.channels[1].radio, true); assert.strictEqual(t.channels[1].
 assert.strictEqual(t.channels[2].group, 'News'); assert.strictEqual(t.channels[2].drmType, 'org.w3.clearkey'); assert.strictEqual(t.channels[2].drmKey, 'aa:bb');
 assert.strictEqual(t.channels[3].group, 'Other'); assert.strictEqual(t.channels[3].num, 4);
 assert.deepStrictEqual(t.groups, ['TV', 'Rádios', 'News', 'Other']);
+var d = M3U.parse('#EXTM3U\n#EXTINF:-1 group-title="TV",A\n#KODIPROP:inputstream.adaptive.drm_legacy=org.w3.clearkey|k1:v1\nhttp://a/m.mpd\n' +
+  '#EXTINF:-1 group-title="TV",B\n#KODIPROP:inputstream.adaptive.drm={"org.w3.clearkey":{"license":{"keyids":{"k2":"v2"}}}}\nhttp://b/m.mpd\n' +
+  '#EXTINF:-1 group-title="TV",C\n#KODIPROP:inputstream.adaptive.drm=not json\nhttp://c/m.mpd\n').channels;
+assert.strictEqual(d[0].drmType, 'org.w3.clearkey'); assert.strictEqual(d[0].drmKey, 'k1:v1');
+assert.strictEqual(d[1].drmType, 'org.w3.clearkey'); assert.strictEqual(d[1].drmKey, 'k2:v2');
+assert.strictEqual(d[2].drmType, 'unknown');
 var real = M3U.parse(fs.readFileSync(__dirname + '/../app/data/M3UPT.m3u', 'utf8'));
 // entries whose URL line is commented out (disabled upstream) must be skipped
 var extinf = 0, open = false;

@@ -9,7 +9,7 @@ A Tizen web app ("IP TV"; package ID `M3uptTvApp`) for 2016 Samsung TVs, e.g. th
 - OK plays the channel full screen. Back returns to the list and the channel keeps playing in the preview.
 - Full screen: CH+ (or Up) goes to the next, higher-numbered channel and CH− (or Down) to the previous one, within the group you started from, OK or Info shows the banner, and Play/Pause pauses.
 - Number keys jump to a channel by its number in the playlist. Red adds or removes a favourite, Green reloads the playlist, Yellow or Stop stops playback, and Blue or PRE-CH returns to the last channel.
-- Groups can be hidden: in the Groups column, Red hides or unhides the selected group. Hidden groups disappear from the list, from "All channels" and from zapping, and number entry refuses their channels. The last row, "Show hidden groups", lists them dimmed so they can be unhidden. The defaults are in `app/js/settings.js` (currently Beachcam, Eixo do Mal, PCNELID, IEGCQT, 100 ou Mais, O Planeta Vivo); a change made on the TV is saved there until the app is reinstalled.
+- Groups can be hidden: in the Groups column, Red hides or unhides the selected group. Hidden groups disappear from the list, from "All channels" and from zapping, and number entry refuses their channels. The last row, "Show hidden groups", lists them dimmed so they can be unhidden. The defaults are in `app/js/settings.js` (currently Beachcam, Eixo do Mal, PCNELID, IEGCQT, 100 ou Mais, O Planeta Vivo, DRM test); a change made on the TV is saved there until the app is reinstalled.
 - Themes: press Info in the channel browser to pick one. Dark: Midnight, Sunset, Forest, Fjord, Espresso, Lagoon, Royal. Black & White and Noir Gold use a pure black background (best on LCD panels, where dark greys show backlight glow) with thin panel edges. Up/Down previews live, OK keeps the choice and Back cancels. The default is `theme` in `app/js/settings.js`. Tizen 2.4's WebKit has no CSS variables, so `app/js/themes.js` builds the colour rules from a palette per theme; layout stays in `style.css`.
 - Logos for the playlist are bundled under `app/logos/` and load locally. If a logo isn't there, it loads from GitHub, and if that fails the row shows the channel's initials.
 - `.pls` radio links are resolved to the real stream. The playlist's `#EXTVLCOPT:http-user-agent` (desktop Firefox) is ignored: RTP returns 404 for it, while the TV's own user-agent works everywhere.
@@ -21,7 +21,12 @@ A Tizen web app ("IP TV"; package ID `M3uptTvApp`) for 2016 Samsung TVs, e.g. th
 - Remote keys are registered through `tizen.tvinputdevice`. On Home or Source the player releases the decoder and restarts the stream when you come back.
 
 ## Known limits (these come from the platform or the streams, not from the app)
-- 64 entries are **ClearKey-DRM DASH** (`#KODIPROP` license keys). Tizen 2.4 AVPlay has no ClearKey support, so they are tagged "DRM — may not play".
+- **ClearKey-encrypted DASH** (RTP 1, RTP 2, SIC and the recorded shows; `#KODIPROP` `license_key=`, `drm_legacy=` or `drm={…}` with the keys) plays, but not through the TV's DRM: Tizen 2.4's AVPlay has no ClearKey, and its prefixed EME accepts ClearKey keys yet passes encrypted samples to the decoder (media error 3). Instead [Shaka Player 2.5](app/js/vendor/README) (the last ES5 build, loaded on first use) streams the DASH segments, `app/js/cenc.js` decrypts each one in software (AES-128-CTR, `cenc` scheme only) in a Web Worker, and the clear MP4 goes to Media Source Extensions. AES runs at about 1.2 MB/s on the TV, so 1080p is fine. These channels are tagged "ClearKey". Other DRM (PlayReady/Widevine, or ClearKey with only a licence URL) shows "Encrypted stream — this TV can't decrypt it".
+- Workarounds in that path, each found on this TV or RTP's servers:
+  - Tizen 2.4 keeps media time as signed 32-bit milliseconds, so live DASH times past ~24.8 days wrap. The manifest is rewritten to shift the live timeline (`availabilityStartTime` + `presentationTimeOffset`); segment URLs are unchanged.
+  - RTP answers a segment requested a moment too early with HTTP 200 and the *previous* segment. Every segment's `tfdt` is checked against the time in its URL and stale ones are refetched (cache-busted).
+  - RTP answers `204` (empty) to foreign `Referer`s, so the app sends none (`<meta name="referrer" content="never">`).
+- AVPlay reports `CONNECTION_FAILED` for dead and encrypted streams too, so a host is only marked "AVPlay can't connect" after the browser fallback has actually played from it.
 - AVPlay can't send `Referer`/`Origin` headers. Testing on 2026-11-21 showed that only one TV channel (AgroBrasil TV) refuses requests without them.
 - Groups such as *Eixo do Mal* and *PCNELID* are recorded episodes (VOD), not live channels. They play, and Play/Pause works on them.
 - The 27 entries whose URL is commented out in the playlist are disabled upstream and are skipped.
@@ -35,6 +40,7 @@ landscape, so a square or 512×423 icon gets stretched there (same approach as t
 ```sh
 npm install            # dev tools only: acorn + playwright-core for the tests
 npm test               # ES5 check, parser test, headless UI walk-through (screenshots in test/shots/)
+npm run test:online    # plays the live ClearKey RTP 1 stream through Shaka + cenc.js in desktop Chromium
 tools/update-data.sh   # refresh the bundled playlist and logos from GitHub
 tools/build.sh         # unsigned build/M3UPTTV.wgt (signed by install-via-asus.sh)
 tools/build.sh <cert-profile>   # signed, needs Tizen Studio's `tizen` CLI on PATH

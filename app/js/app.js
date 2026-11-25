@@ -202,7 +202,10 @@
     var h = '';
     if (favs[ch.key]) { h += '<span class="tag fav">★' + (big ? ' Favourite' : '') + '</span>'; }
     if (ch.radio) { h += '<span class="tag radio">' + (big ? 'Radio' : 'R') + '</span>'; }
-    if (ch.drmType) { h += '<span class="tag drm">' + (big ? 'DRM — may not play' : 'DRM') + '</span>'; }
+    if (ch.drmType) {
+      h += Player.canDecrypt(ch) ? '<span class="tag">' + (big ? 'ClearKey (decrypted here)' : 'CK') + '</span>' :
+        '<span class="tag drm">' + (big ? 'DRM — not playable' : 'DRM') + '</span>';
+    }
     if (big && /\.mpd(\?|$)/i.test(ch.url)) { h += '<span class="tag">DASH</span>'; }
     if (big && /\.m3u8(\?|$)/i.test(ch.url)) { h += '<span class="tag">HLS</span>'; }
     return h;

@@ -5,6 +5,8 @@ fs.mkdirSync(shots, { recursive: true });
 var srv = http.createServer(function (q, r) {
   var f = path.join(root, decodeURIComponent(q.url.split('?')[0]));
   if (q.url.indexOf('$WEBAPIS') >= 0 || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { r.writeHead(404); return r.end(); }
+  var types = { '.js': 'text/javascript', '.html': 'text/html', '.css': 'text/css', '.png': 'image/png', '.m3u': 'text/plain; charset=utf-8' };
+  r.writeHead(200, { 'Content-Type': types[path.extname(f)] || 'application/octet-stream' });   // workers need a JS MIME type
   r.end(fs.readFileSync(f));
 }).listen(8765);
 var MOCK = function () {
@@ -28,6 +30,10 @@ var MOCK = function () {
   var p = await b.newPage({ viewport: { width: 1920, height: 1080 } });
   var errors = []; p.on('pageerror', function (e) { errors.push(e.message); });
   await p.addInitScript(MOCK);
+  // Serve the bundled playlist instead of the live one so counts don't change with upstream edits.
+  await p.route('https://raw.githubusercontent.com/LITUATUI/M3UPT/main/M3U/M3UPT.m3u', function (route) {
+    route.fulfill({ status: 200, contentType: 'text/plain; charset=utf-8', body: fs.readFileSync(path.join(root, 'data/M3UPT.m3u')) });
+  });
   await p.goto('http://127.0.0.1:8765/index.html');
   await p.waitForFunction(function () { return App._state().all.length > 0; }, null, { timeout: 30000 });
   await p.waitForTimeout(1500);
@@ -51,9 +57,12 @@ var MOCK = function () {
   await p.evaluate(function () { window.__failNext = 'fail'; });
   await key('Enter'); await p.waitForTimeout(1200);
   await p.screenshot({ path: shots + '/6-error.png' });
-  var fb = await p.evaluate(function () { return { active: Player.active(), src: document.getElementById('html5-player').getAttribute('src'), hosts: JSON.parse(localStorage.getItem('noavhosts') || '{}') }; });
-  if (fb.active !== 'html5' || !fb.src || !fb.hosts['streaming-live.rtp.pt']) { throw new Error('AVPlay connection failure did not fall back to HTML5: ' + JSON.stringify(fb)); }
-  console.log('fallback to HTML5 OK: ' + fb.src);
+  // The mock fails the master playlist once; the app then resolves the variant through the
+  // browser and AVPlay plays it from the same host, so that host must not be recorded.
+  var fb = await p.evaluate(function () { return { active: Player.active(), state: Player.state(), last: window.__av.filter(function (l) { return l.indexOf('open') === 0; }).pop(), hosts: JSON.parse(localStorage.getItem('noavhosts2') || '{}') }; });
+  if (fb.active !== 'avplay' || fb.state !== 'playing' || fb.last.indexOf('chunklist') < 0) { throw new Error('expected the resolved variant to play in AVPlay: ' + JSON.stringify(fb)); }
+  if (fb.hosts['streaming-live.rtp.pt']) { throw new Error('host recorded although AVPlay reached it: ' + JSON.stringify(fb.hosts)); }
+  console.log('fallback OK: ' + fb.last + ' (host not recorded)');
   await key('Escape'); await key('1'); await key('0'); await key('0'); await p.waitForTimeout(2200);
   await p.screenshot({ path: shots + '/7-number.png' });
   var ev = await p.evaluate(function () { var s = App._state(); return { sel: s.groups[s.gSel].name + '#' + (s.cSel + 1), av: window.__av }; });

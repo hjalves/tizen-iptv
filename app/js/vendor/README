@@ -1,0 +1,2 @@
+Shaka Player v2.5.23 (https://github.com/shaka-project/shaka-player), Apache License 2.0 (see shaka-player.LICENSE).
+The 2.5 line is the last compiled to ES5, which the Tizen 2.4 WebKit needs.
