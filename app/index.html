@@ -21,6 +21,7 @@
 
   <div id="browser">
     <div id="header">
+      <img id="brand-logo" src="img/logo.png" alt="">
       <div id="brand">IP<span>TV</span></div>
       <div id="status"></div>
       <div id="clock"></div>
@@ -58,13 +59,15 @@
       </div>
     </div>
 
+    <div id="epg-loading"><span class="mini-spinner"></span><span id="epg-loading-text"></span></div>
     <div id="footer">
       <span class="key"><b class="dot red"></b><span id="red-label">Favourite</span></span>
-      <span class="key"><b class="dot green"></b>Reload playlist</span>
+      <span class="key"><b class="dot green"></b>Reload</span>
       <span class="key"><b class="dot yellow"></b>Stop</span>
       <span class="key"><b class="dot blue"></b>Last channel</span>
-      <span class="key"><b class="num">0-9</b>Channel number</span>
+      <span class="key"><b class="num">0-9</b>Channel</span>
       <span class="key"><b class="num">INFO</b>Theme</span>
+      <span class="key"><b class="num">GUIDE</b>Guide</span>
     </div>
   </div>
 
@@ -75,7 +78,6 @@
     <div id="banner-logo"><img id="banner-img" alt=""></div>
     <div id="banner-text">
       <div id="banner-name"></div>
-      <div id="banner-sub"></div>
       <div id="banner-epg">
         <div class="b-row"><span id="b-now-time"></span><span id="b-now-title"></span></div>
         <div class="b-bar"><div id="b-fill"></div></div>
@@ -88,6 +90,22 @@
     <div class="tp-title">Theme</div>
     <div id="tp-rows"></div>
     <div class="tp-help">Up/Down preview · OK keep · Back cancel</div>
+  </div>
+  <!-- Programme guide for one channel (Guide key) -->
+  <div id="guide">
+    <div id="guide-head">
+      <div id="guide-logo"><img id="guide-img" alt=""></div>
+      <div id="guide-ch"></div>
+      <div id="guide-sub"></div>
+      <div id="guide-hint">◀ ▶ channel &nbsp;·&nbsp; ▲ ▼ programme &nbsp;·&nbsp; OK watch &nbsp;·&nbsp; Back close</div>
+    </div>
+    <div id="guide-list"><div id="guide-rows"></div><div id="guide-empty">No programme information for this channel</div></div>
+    <div id="guide-detail">
+      <div id="gd-when"></div>
+      <div id="gd-title"></div>
+      <div id="gd-bar"><div id="gd-fill"></div></div>
+      <div id="gd-desc"></div>
+    </div>
   </div>
   <div id="numentry"></div>
   <div id="toast"></div>

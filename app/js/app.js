@@ -91,6 +91,7 @@
     $('preview-logo').onerror = logoError;
     $('banner-img').onerror = logoError;
     $('radio-logo').onerror = logoError;
+    $('guide-img').onerror = logoError;
   }
 
   /* ---------- data ---------- */
@@ -208,6 +209,7 @@
       h += Player.canDecrypt(ch) ? '<span class="tag">' + (big ? 'ClearKey' : 'CK') + '</span>' :
         '<span class="tag drm">' + (big ? 'DRM — not playable' : 'DRM') + '</span>';
     }
+    if (Player.isHevc(ch)) { h += '<span class="tag drm">' + (big ? 'HEVC — not supported by this TV' : 'HEVC') + '</span>'; }
     if (big && /\.mpd(\?|$)/i.test(ch.url)) { h += '<span class="tag">DASH</span>'; }
     if (big && /\.m3u8(\?|$)/i.test(ch.url)) { h += '<span class="tag">HLS</span>'; }
     return h;
@@ -292,9 +294,15 @@
     $('e-next').style.display = next ? 'block' : 'none';
   }
 
+  function renderGuideLoading() {
+    var ph = EPG.phase(), pct = EPG.percent();
+    U.toggleClass($('epg-loading'), 'show', !!ph);
+    U.text($('epg-loading-text'), ph === 'download' ? 'Downloading guide…' + (pct >= 0 ? ' ' + pct + '%' : '') :
+      (ph === 'parse' ? 'Reading guide…' : ''));
+  }
+
   function guideStatus() {
     var st = EPG.state();
-    if (st === 'loading') { return ' · guide: loading…'; }
     if (st === 'failed') { return ' · guide unavailable'; }
     if (st === 'ready') { return ' · guide: ' + EPG.channelCount() + ' channels'; }
     return '';
@@ -408,14 +416,12 @@
     renderAll();
   }
 
-  function showBanner(autoHide) {
+  /* Fill the full-screen banner (no visibility or timer changes). */
+  function renderBanner() {
     var ch = playing;
     if (!ch) { return; }
     U.text($('banner-num'), ch.num);
     U.text($('banner-name'), ch.name);
-    var list = zapList || visible, idx = list.indexOf(ch);
-    U.text($('banner-sub'), ch.group + (idx >= 0 ? '   ·   ' + (idx + 1) + ' of ' + list.length : '') +
-      (favs[ch.key] ? '   ·   ★' : ''));
     var nn = EPG.nowNext(ch.tvgId), t = Math.floor(new Date().getTime() / 1000);
     U.toggleClass($('banner'), 'has-epg', !!(nn && (nn.now || nn.next)));
     U.text($('b-now-time'), nn && nn.now ? EPG.hhmm(nn.now[0]) + '–' + EPG.hhmm(nn.now[1]) : '');
@@ -426,6 +432,13 @@
     setLogo($('radio-logo'), ch);
     U.text($('radio-name'), ch.radio ? ch.name : '');
     renderPlayMsg();
+  }
+
+  /* Show the banner; with autoHide it goes away after 5 s once the channel plays
+     (it stays while connecting, buffering or showing an error). */
+  function showBanner(autoHide) {
+    if (!playing) { return; }
+    renderBanner();
     U.addClass($('banner'), 'show');
     clearTimeout(bannerTimer);
     if (autoHide) {
@@ -501,6 +514,104 @@
     gSel = groups.length - 1;               // stay on the toggle row
     cSel = 0; cTop = 0;
     renderAll();
+  }
+
+  /* ---------- programme guide (Guide key) ---------- */
+  var guide = { open: false, ch: null, chList: [], items: [], rows: [], sel: 0 };
+  var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  function dayKey(sec) { var d = new Date(sec * 1000); return d.getFullYear() * 10000 + d.getMonth() * 100 + d.getDate(); }
+  function dayLabel(sec) {
+    var d = new Date(sec * 1000), today = new Date(), k = dayKey(sec), oneDay = 86400;
+    var t = Math.floor(today.getTime() / 1000), name = DAYS[d.getDay()] + ', ' + d.getDate() + ' ' + MONTHS[d.getMonth()];
+    if (k === dayKey(t)) { return 'Today · ' + name; }
+    if (k === dayKey(t + oneDay)) { return 'Tomorrow · ' + name; }
+    if (k === dayKey(t - oneDay)) { return 'Yesterday · ' + name; }
+    return name;
+  }
+  function nowS() { return Math.floor(new Date().getTime() / 1000); }
+
+  function openGuide() {
+    var ch, list;
+    if (fullscreen) { ch = playing; list = zapList || visible; }
+    else { ch = zone === 'channels' ? curItems()[cSel] : (playing || curItems()[cSel]); list = curItems().length ? curItems() : visible; }
+    if (!ch) { return; }
+    if (list.indexOf(ch) < 0) { list = visible; }
+    guide.open = true; guide.chList = list;
+    hideBanner();
+    U.addClass($('guide'), 'show');
+    showGuideFor(ch);
+  }
+
+  function closeGuide() { guide.open = false; U.removeClass($('guide'), 'show'); }
+
+  function showGuideFor(ch) {
+    var items = EPG.list(ch.tvgId), t = nowS(), html = [], i, p, lastDay = null, cls;
+    guide.ch = ch; guide.items = items; guide.sel = 0;
+    U.text($('guide-ch'), ch.num + '  ' + ch.name);
+    U.text($('guide-sub'), 'Programme guide' + (items.length ? ' · ' + items.length + ' programmes' : ''));
+    setLogo($('guide-img'), ch);
+    for (i = 0; i < items.length; i++) {
+      p = items[i];
+      if (dayKey(p[0]) !== lastDay) { lastDay = dayKey(p[0]); html.push('<div class="g-day">' + U.escapeHtml(dayLabel(p[0])) + '</div>'); }
+      cls = 'g-prog' + (p[1] <= t ? ' past' : '');
+      html.push('<div class="' + cls + '"><span class="g-time">' + EPG.hhmm(p[0]) + '</span><span class="g-title">' +
+        U.escapeHtml(p[2] || '—') + '</span>' + (p[0] <= t && t < p[1] ? '<span class="g-now">NOW</span>' : '') + '</div>');
+      if (p[1] <= t) { guide.sel = i + 1; }                // start on the programme that's on now
+    }
+    $('guide-rows').innerHTML = html.join('');
+    guide.rows = [];
+    var kids = $('guide-rows').childNodes;
+    for (i = 0; i < kids.length; i++) { if (kids[i].className.indexOf('g-prog') === 0) { guide.rows.push(kids[i]); } }
+    if (guide.sel >= items.length) { guide.sel = Math.max(0, items.length - 1); }
+    $('guide-empty').style.display = items.length ? 'none' : 'block';
+    $('guide-detail').style.visibility = items.length ? 'visible' : 'hidden';
+    renderGuideSel();
+  }
+
+  function renderGuideSel() {
+    var i, row, p = guide.items[guide.sel], t = nowS(), wrap = $('guide-rows');
+    for (i = 0; i < guide.rows.length; i++) { U.toggleClass(guide.rows[i], 'sel', i === guide.sel); }
+    row = guide.rows[guide.sel];
+    if (row) {                                             // keep the selection in view, with context above it
+      var top = row.offsetTop - 140, max = Math.max(0, wrap.offsetHeight - 800);
+      wrap.style.top = -Math.max(0, Math.min(top, max)) + 'px';
+    }
+    if (!p) { return; }
+    var mins = Math.round((p[1] - p[0]) / 60), on = p[0] <= t && t < p[1];
+    U.text($('gd-when'), dayLabel(p[0]).replace(/ · .*$/, '') + '  ' + EPG.hhmm(p[0]) + ' – ' + EPG.hhmm(p[1]) + '  ·  ' +
+      (mins >= 60 ? Math.floor(mins / 60) + ' h ' + (mins % 60 ? mins % 60 + ' min' : '') : mins + ' min') +
+      (on ? '  ·  on now, ' + Math.round((p[1] - t) / 60) + ' min left' : (p[1] <= t ? '  ·  ended' : '')));
+    U.text($('gd-title'), p[2] || '—');
+    $('gd-bar').style.display = on ? 'block' : 'none';
+    if (on) { $('gd-fill').style.width = progressPct(p, t) + '%'; }
+    U.text($('gd-desc'), p[3] || 'No description.');
+  }
+
+  function onKeyGuide(k) {
+    var n = guide.items.length, idx;
+    switch (k) {
+      case 'UP': if (guide.sel > 0) { guide.sel--; renderGuideSel(); } return;
+      case 'DOWN': if (guide.sel < n - 1) { guide.sel++; renderGuideSel(); } return;
+      case 'CH_UP': guide.sel = Math.min(n - 1, guide.sel + 6); renderGuideSel(); return;
+      case 'CH_DOWN': guide.sel = Math.max(0, guide.sel - 6); renderGuideSel(); return;
+      case 'LEFT': case 'RIGHT':
+        idx = guide.chList.indexOf(guide.ch);
+        if (idx < 0 || !guide.chList.length) { return; }
+        idx = (idx + (k === 'RIGHT' ? 1 : -1) + guide.chList.length) % guide.chList.length;
+        showGuideFor(guide.chList[idx]);
+        return;
+      case 'ENTER':
+        var ch = guide.ch;
+        closeGuide();
+        if (ch !== playing || playState === 'error' || playState === 'ended') { startChannel(ch, guide.chList); }
+        syncCursorTo(ch);
+        if (fullscreen) { showBanner(true); } else { enterFullscreen(); }
+        return;
+      case 'RETURN': case 'GUIDE': closeGuide(); return;
+      default: return;
+    }
   }
 
   /* ---------- theme picker ---------- */
@@ -646,7 +757,9 @@
       else if (k === 'RETURN') { exitApp(); }
       return;
     }
+    if (guide.open) { onKeyGuide(k); return; }
     if (picker.open) { onKeyPicker(k); return; }
+    if (k === 'GUIDE') { openGuide(); return; }
     if (/^[0-9]$/.test(k)) { numberKey(k); return; }
     if (k === 'GREEN') { loadPlaylist(true); return; }
     if (fullscreen) { onKeyFullscreen(k); } else { onKeyBrowser(k); }
@@ -666,7 +779,8 @@
     if (minute !== lastMinute && all.length) {        // now/next and progress move on
       lastMinute = minute;
       renderChannels(); renderDetails();
-      if (U.hasClass($('banner'), 'show')) { showBanner(false); }
+      if (U.hasClass($('banner'), 'show')) { renderBanner(); }   // refresh content, keep the hide timer
+      if (guide.open) { var keep = guide.sel; showGuideFor(guide.ch); guide.sel = Math.min(keep, Math.max(0, guide.items.length - 1)); renderGuideSel(); }
     }
   }
 
@@ -688,13 +802,15 @@
     tick();
     setInterval(tick, 10000);
     EPG.onChange(function () {
+      renderGuideLoading();
       if (!all.length) { return; }
       renderStatus(); renderChannels(); renderDetails();
-      if (U.hasClass($('banner'), 'show')) { showBanner(false); }
+      if (U.hasClass($('banner'), 'show')) { renderBanner(); }   // refresh content, keep the hide timer
+      if (guide.open && EPG.phase() === '') { showGuideFor(guide.ch); }
     });
     loadPlaylist(false);
   }
 
-  global.App = { init: init, _state: function () { return { all: all, groups: groups, gSel: gSel, cSel: cSel, zone: zone, fullscreen: fullscreen, playing: playing }; } };
+  global.App = { init: init, _tick: function () { lastMinute = -1; tick(); }, _state: function () { return { all: all, groups: groups, gSel: gSel, cSel: cSel, zone: zone, fullscreen: fullscreen, playing: playing }; } };
   if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init, false); } else { init(); }
 }(this));

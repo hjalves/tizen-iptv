@@ -414,6 +414,52 @@
     videoEl.style.display = 'none';
   }
 
+  /* ---------- HEVC check ----------
+     This TV can't decode HEVC (H.265) streams although it claims support: AVPlay and the
+     browser both play them as a green picture (seen with CNN Brasil, every variant).
+     While an HLS channel starts, its master playlist is read in the background: if every
+     video variant is HEVC, playback stops with a clear message (and the URL is
+     remembered); if H.264 variants exist too, the best H.264 one is played directly.
+     SETTINGS.hevcSupported = true turns this off for TVs that do decode HEVC. */
+  var HEVC_MSG = 'This channel uses HEVC (H.265) video, which this TV can\'t decode';
+  var hevcUrls = (global.U && global.U.store.get('hevcurls', {})) || {};
+
+  function hevcAllowed() { return !!(global.SETTINGS && global.SETTINGS.hevcSupported); }
+
+  function variants(text, base) {
+    var lines = String(text).split(/\r?\n/), out = [], i, j, m, c;
+    for (i = 0; i < lines.length; i++) {
+      if (lines[i].indexOf('#EXT-X-STREAM-INF') !== 0) { continue; }
+      m = /BANDWIDTH=(\d+)/.exec(lines[i]); c = /CODECS="([^"]*)"/.exec(lines[i]);
+      for (j = i + 1; j < lines.length && (!lines[j].trim() || lines[j].charAt(0) === '#'); j++) {}
+      if (j < lines.length) { out.push({ bw: m ? +m[1] : 0, codecs: c ? c[1] : '', url: absUrl(lines[j].trim(), base) }); }
+    }
+    return out;
+  }
+
+  function checkCodecs(ch, url, my) {
+    if (hevcAllowed() || !/\.m3u8(\?|$)/i.test(url)) { return; }
+    global.U.get(url, 8000, function (err, txt) {
+      if (err || my !== session) { return; }
+      var vs = variants(txt, url), avc = null, hevc = 0, i;
+      for (i = 0; i < vs.length; i++) {
+        if (/(^|,)\s*(hvc1|hev1)/.test(vs[i].codecs)) { hevc++; }
+        else if (/(^|,)\s*(avc1|avc3)/.test(vs[i].codecs) && (!avc || vs[i].bw > avc.bw)) { avc = vs[i]; }
+      }
+      if (!hevc) { return; }
+      var again = ++session;                           // drop callbacks of the attempt in flight
+      if (!avc) {                                      // HEVC only: unplayable here
+        hevcUrls[ch.url] = 1;
+        if (global.U) { global.U.store.set('hevcurls', hevcUrls); }
+        clearStartTimer(); closeAll();
+        emit('error', HEVC_MSG);
+        return;
+      }
+      if (active === 'avplay') { avClose(); armTimer(again); avStart(ch, avc.url, again, true); }   // avoid the HEVC variants
+      else if (active === 'html5') { videoEl._session = again; armTimer(again); videoEl.src = avc.url; try { videoEl.play(); } catch (e) {} }
+    });
+  }
+
   /* ---------- public API ---------- */
   var Player = {
     engine: avplay ? 'avplay' : 'html5',
@@ -431,6 +477,9 @@
 
     /* Engine of the current playback ('avplay' | 'html5' | 'shaka' | null). */
     active: function () { return active; },
+
+    /* True once a channel is known to be HEVC-only (unplayable on this TV). */
+    isHevc: function (ch) { return !!hevcUrls[ch.url] && !hevcAllowed(); },
 
     /* True for encrypted entries this app can still play (ClearKey DASH with keys). */
     canDecrypt: canDecrypt,
@@ -457,11 +506,13 @@
         emit('error', 'Encrypted stream (' + ch.drmType.replace(/^org\.w3\./, '') + ') — this TV can\'t decrypt it');
         return;
       }
+      if (hevcUrls[ch.url] && !hevcAllowed()) { clearStartTimer(); emit('error', HEVC_MSG); return; }
       resolveUrl(ch.url, function (url) {
         if (my !== session) { return; }
         if (!avplay) { h5Start(ch, url, my); }
         else if (noAvHosts[hostOf(url)]) { viaBrowser(ch, url, my); }
         else { avStart(ch, url, my, false); }
+        checkCodecs(ch, url, my);
       });
     },
 

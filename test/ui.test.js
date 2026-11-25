@@ -36,11 +36,25 @@ var MOCK = function () {
     return d.getUTCFullYear() + p(d.getUTCMonth() + 1) + p(d.getUTCDate()) + p(d.getUTCHours()) + p(d.getUTCMinutes()) + '00 +0000'; }
   var nowMs = Date.now(), H = 3600000;
   var epgXml = '<?xml version="1.0" encoding="UTF-8"?><tv>' +
+    '<programme start="' + xt(nowMs - 2.5 * H) + '" stop="' + xt(nowMs - 1.5 * H) + '" channel="RTP1.pt"><title>Portugal em Direto</title></programme>' +
+    '<programme start="' + xt(nowMs - 1.5 * H) + '" stop="' + xt(nowMs - H / 2) + '" channel="RTP1.pt"><title>O Preço Certo</title></programme>' +
     '<programme start="' + xt(nowMs - H / 2) + '" stop="' + xt(nowMs + H / 2) + '" channel="RTP1.pt"><title>Telejornal</title><desc>Notícias do dia, com a atualidade nacional e internacional.</desc></programme>' +
-    '<programme start="' + xt(nowMs + H / 2) + '" stop="' + xt(nowMs + 2 * H) + '" channel="RTP1.pt"><title>Prós e Contras</title></programme>' +
+    '<programme start="' + xt(nowMs + H / 2) + '" stop="' + xt(nowMs + 2 * H) + '" channel="RTP1.pt"><title>Prós e Contras</title><desc>Debate semanal sobre os temas que marcam a atualidade.</desc></programme>' +
+    ['Série: A Herdade', 'Cinema: Os Gatos Não Têm Vertigens', '24 Horas', 'Televendas', 'Bom Dia Portugal', 'Jornal da Tarde'].map(function (t, i) {
+      return '<programme start="' + xt(nowMs + (2 + 3 * i) * H) + '" stop="' + xt(nowMs + (5 + 3 * i) * H) + '" channel="RTP1.pt"><title>' + t + '</title></programme>'; }).join('') +
     '<programme start="' + xt(nowMs - H) + '" stop="' + xt(nowMs + H) + '" channel="TVI.pt"><title>Big Brother</title></programme></tv>';
-  await p.route('https://m3upt.com/epg', function (route) {
+  await p.route('https://m3upt.com/epg', async function (route) {
+    await new Promise(function (r) { setTimeout(r, 2000); });     // slow enough to see the indicator
     route.fulfill({ status: 200, contentType: 'application/octet-stream', headers: { 'Access-Control-Allow-Origin': '*' }, body: zlib.gzipSync(Buffer.from(epgXml, 'utf8')) });
+  });
+  // Fake HLS masters for the HEVC check: HEVC-only, and mixed H.264 + HEVC.
+  var masters = {
+    'https://test.invalid/hevc/master.m3u8': '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=4000000,CODECS="hvc1.1.6.L120.B0,mp4a.40.2"\nhd.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=900000,CODECS="hvc1.1.6.L63.B0,mp4a.40.2"\nsd.m3u8\n',
+    'https://test.invalid/mixed/master.m3u8': '#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=5000000,CODECS="hvc1.1.6.L120.B0,mp4a.40.2"\nhevc.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=3000000,CODECS="avc1.640028,mp4a.40.2"\navc-hd.m3u8\n#EXT-X-STREAM-INF:BANDWIDTH=1000000,CODECS="avc1.4d401f,mp4a.40.2"\navc-sd.m3u8\n'
+  };
+  await p.route(/^https:\/\/test\.invalid\//, function (route) {
+    var body = masters[route.request().url()];
+    route.fulfill(body ? { status: 200, contentType: 'application/vnd.apple.mpegurl', headers: { 'Access-Control-Allow-Origin': '*' }, body: body } : { status: 404, body: '' });
   });
   // Serve the bundled playlist instead of the live one so counts don't change with upstream edits.
   await p.route('https://m3upt.com/iptv', function (route) {
@@ -51,7 +65,13 @@ var MOCK = function () {
   await p.waitForTimeout(1500);
   var s = await p.evaluate(function () { var s = App._state(); return { n: s.all.length, groups: s.groups.map(function (g) { return g.name + ':' + g.items.length; }), status: document.getElementById('status').textContent }; });
   console.log(JSON.stringify(s));
+  var ind = await p.evaluate(function () { var e = document.getElementById('epg-loading'); return [e.className, e.textContent, getComputedStyle(e).display]; });
+  if (ind[0].indexOf('show') < 0 || ind[1].indexOf('guide') < 0 || ind[2] === 'none') { throw new Error('guide loading indicator not shown: ' + ind); }
+  await p.screenshot({ path: shots + '/0-guide-loading.png' });
   await p.waitForFunction(function () { return EPG.state() === 'ready'; }, null, { timeout: 20000 });
+  var gone = await p.evaluate(function () { return getComputedStyle(document.getElementById('epg-loading')).display; });
+  if (gone !== 'none') { throw new Error('guide loading indicator still shown after loading'); }
+  console.log('epg indicator OK: "' + ind[1] + '" while loading, hidden after');
   await p.waitForTimeout(300);
   var g = await p.evaluate(function () { return { row: document.querySelector('#channel-rows .row .r-now').textContent,
     now: document.getElementById('e-now-title').textContent, next: document.getElementById('e-next-title').textContent,
@@ -61,11 +81,35 @@ var MOCK = function () {
   console.log('epg UI OK: ' + JSON.stringify(g));
   await p.screenshot({ path: shots + '/1-browser.png' });
   var key = async function (k, n) { for (var i = 0; i < (n || 1); i++) { await p.keyboard.press(k); await p.waitForTimeout(120); } };
+  // ---- programme guide overlay (Guide key; 'e' on desktop) ----
+  var gs = function () { return p.evaluate(function () { var sel = document.querySelector('#guide-rows .g-prog.sel');
+    return { open: document.getElementById('guide').className.indexOf('show') >= 0, ch: document.getElementById('guide-ch').textContent,
+      sel: sel && sel.querySelector('.g-title').textContent, now: !!(sel && sel.querySelector('.g-now')), title: document.getElementById('gd-title').textContent,
+      empty: getComputedStyle(document.getElementById('guide-empty')).display !== 'none', days: document.querySelectorAll('#guide-rows .g-day').length }; }); };
+  await key('e'); await p.waitForTimeout(300);
+  var gg = await gs();
+  if (!gg.open || gg.ch.indexOf('RTP 1') < 0 || gg.sel !== 'Telejornal' || !gg.now || gg.title !== 'Telejornal') { throw new Error('guide should open on RTP 1 at the current programme: ' + JSON.stringify(gg)); }
+  await p.screenshot({ path: shots + '/1b-guide.png' });
+  await key('ArrowDown'); gg = await gs();
+  if (gg.sel !== 'Prós e Contras' || gg.title !== 'Prós e Contras') { throw new Error('Down should select the next programme: ' + JSON.stringify(gg)); }
+  await key('ArrowRight'); gg = await gs();
+  if (gg.ch.indexOf('RTP 2') < 0 || !gg.empty) { throw new Error('Right should show RTP 2 (no listings): ' + JSON.stringify(gg)); }
+  await key('ArrowLeft'); gg = await gs();
+  if (gg.ch.indexOf('RTP 1') < 0 || gg.sel !== 'Telejornal') { throw new Error('Left should go back to RTP 1: ' + JSON.stringify(gg)); }
+  await key('Escape'); gg = await gs();
+  if (gg.open) { throw new Error('Back should close the guide'); }
+  console.log('guide overlay OK: opens on now, Down/Left/Right, empty channel, Back closes (' + gg.days + ' day headings)');
   await key('ArrowDown', 3); await key('Enter'); await p.waitForTimeout(800);       // RTP Notícias? -> fullscreen
   await p.screenshot({ path: shots + '/2-fullscreen.png' });
   var bn = await p.evaluate(function () { return [document.getElementById('banner').className, document.getElementById('b-now-title').textContent]; });
   if (bn[0].indexOf('has-epg') < 0 || bn[1] !== 'Big Brother') { throw new Error('banner without guide info: ' + bn); }
   console.log('epg banner OK: ' + bn[1]);
+  // Regression: the per-minute refresh used to cancel the banner's auto-hide timer.
+  await p.evaluate(function () { App._tick(); });
+  await p.waitForTimeout(6500);
+  var stillShown = await p.evaluate(function () { return document.getElementById('banner').className.indexOf('show') >= 0 ? Player.state() : ''; });
+  if (stillShown) { throw new Error('banner should hide ~5 s after a refresh while playing (state ' + stillShown + ')'); }
+  console.log('banner auto-hide OK after a minute refresh');
   await key('PageUp'); await p.waitForTimeout(1200);                                // zap: CH+ → next channel
   var afterZap = await p.evaluate(function () { return App._state().playing.num; });
   if (afterZap !== 5) { throw new Error('CH+ from channel 4 should play channel 5, got ' + afterZap); }
@@ -95,6 +139,23 @@ var MOCK = function () {
   await key('Escape'); await key('1'); await key('0'); await key('0'); await p.waitForTimeout(2200);
   await p.screenshot({ path: shots + '/7-number.png' });
   var ev = await p.evaluate(function () { var s = App._state(); return { sel: s.groups[s.gSel].name + '#' + (s.cSel + 1), av: window.__av }; });
+  // ---- HEVC check ----
+  var hv = await p.evaluate(function () {
+    return new Promise(function (resolve) {
+      var hevcCh = { name: 'HEVC test', group: 'TV', key: 'x1', num: 0, url: 'https://test.invalid/hevc/master.m3u8' };
+      Player.play(hevcCh);
+      setTimeout(function () {
+        var r = { state: Player.state(), err: Player.lastError(), known: Player.isHevc(hevcCh) };
+        window.__av.length = 0;
+        Player.play({ name: 'Mixed test', group: 'TV', key: 'x2', num: 0, url: 'https://test.invalid/mixed/master.m3u8' });
+        setTimeout(function () { r.mixedOpens = window.__av.filter(function (l) { return l.indexOf('open') === 0; }); r.mixedState = Player.state(); Player.stop(); resolve(r); }, 1500);
+      }, 1500);
+    });
+  });
+  if (hv.state !== 'error' || hv.err.indexOf('HEVC') < 0 || !hv.known) { throw new Error('HEVC-only channel should stop with the HEVC message: ' + JSON.stringify(hv)); }
+  if (hv.mixedOpens[hv.mixedOpens.length - 1].indexOf('avc-hd.m3u8') < 0 || hv.mixedState !== 'playing') { throw new Error('mixed playlist should switch to the best H.264 variant: ' + JSON.stringify(hv)); }
+  console.log('hevc OK: HEVC-only refused + remembered; mixed -> ' + hv.mixedOpens.pop());
+
   // ---- hidden groups ----
   var names = async function () { return p.evaluate(function () { return App._state().groups.map(function (g) { return g.name + ':' + g.items.length; }); }); };
   var g0 = await names();

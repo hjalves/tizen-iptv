@@ -6,6 +6,9 @@ var SETTINGS = {
   // playlist (M3U); m3upt.com/iptv redirects to the M3UPT repo's M3U/M3UPT.m3u
   playlistUrl: 'https://m3upt.com/iptv',
 
+  // This TV can't decode HEVC (H.265) streams (green picture); set true on a TV that can
+  hevcSupported: false,
+
   // programme guide (XMLTV, gzipped); m3upt.com/epg redirects to the M3UPT repo's guide
   epgUrl: 'https://m3upt.com/epg',
 

@@ -69,7 +69,7 @@
     rule('html, body, #stage, #radio-art, #loading', 'background: ' + t.bg + '; color: ' + t.text + ';');
     rule('#brand, #clock, #numentry, #radio-name, #banner-name', 'color: ' + t.strong + ';');
     rule('#brand span, #info-num, #banner-num', 'color: ' + t.accent + ';');
-    rule('#status, .panel-title, .g-count, .r-num, #info-group, #footer, #banner-sub, #loading-text, .row.toggle-row .g-name',
+    rule('#status, .panel-title, .g-count, .r-num, #info-group, #footer, #loading-text, .row.toggle-row .g-name',
       'color: ' + t.dim + ';');
     rule('.r-initials, #channels-empty, #info-help', 'color: ' + t.faint + ';');
     rule('.num', 'border-color: ' + t.dim + ';');
@@ -83,6 +83,20 @@
     rule('.tag', 'background: ' + t.tagBg + '; color: ' + t.tagText + ';');
     rule('#scrollbar', 'background: ' + t.track + ';');
     // programme guide
+    rule('#guide', 'background: ' + t.bg + '; color: ' + t.text + ';');
+    rule('#guide-list, #guide-detail', 'background: ' + t.panel + ';' + (t.edge ? ' -webkit-box-shadow: inset 0 0 0 2px ' + t.edge + '; box-shadow: inset 0 0 0 2px ' + t.edge + ';' : ''));
+    rule('#guide-logo', 'background: ' + t.logoBg + ';');
+    rule('#guide-ch, #gd-title', 'color: ' + t.strong + ';');
+    rule('#guide-sub, #guide-hint, .g-day, .g-time, #gd-when, #guide-empty', 'color: ' + t.dim + ';');
+    rule('#gd-desc', 'color: ' + t.text + ';');
+    rule('.g-prog.sel', 'background: ' + t.accent + '; color: ' + t.accentText + '; border-color: ' + t.accentBorder + ';');
+    rule('.g-prog.sel .g-time', 'color: ' + t.onAccentDim + ';');
+    rule('.g-now', 'background: ' + t.accent + '; color: ' + t.accentText + ';');
+    rule('.g-prog.sel .g-now', 'background: ' + t.accentText + '; color: ' + t.accent + ';');
+    rule('#gd-bar', 'background: ' + t.selIdle + ';');
+    rule('#gd-fill', 'background: ' + t.accent + ';');
+    rule('#epg-loading', 'color: ' + t.dim + ';');
+    rule('.mini-spinner', 'border-color: ' + t.selIdle + '; border-top-color: ' + t.accent + ';');
     rule('.r-now, .e-time, .e-label, #e-desc, #b-now-time, #b-next', 'color: ' + t.dim + ';');
     rule('.panel.active .row.sel .r-now', 'color: ' + t.onAccentDim + ';');
     rule('.e-title, #b-now-title', 'color: ' + t.strong + ';');

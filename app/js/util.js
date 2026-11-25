@@ -75,19 +75,19 @@
      numbers below are only the fallback for desktop testing. */
   var KEY_NAMES = ['ColorF0Red', 'ColorF1Green', 'ColorF2Yellow', 'ColorF3Blue',
     'ChannelUp', 'ChannelDown', 'MediaPlayPause', 'MediaPlay', 'MediaPause', 'MediaStop',
-    'Info', 'PreviousChannel', 'ChannelList',
+    'Info', 'Guide', 'PreviousChannel', 'ChannelList',
     '0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
   U.KEY = {
     LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ENTER: 13, RETURN: 10009,
     RED: 403, GREEN: 404, YELLOW: 405, BLUE: 406,
     CH_UP: 427, CH_DOWN: 428, PLAYPAUSE: 10252, PLAY: 415, PAUSE: 19, STOP: 413,
-    INFO: 457, PREV_CH: 10190, CH_LIST: 10073
+    INFO: 457, GUIDE: 458, PREV_CH: 10190, CH_LIST: 10073
   };
   var NAME_TO_KEY = {
     ColorF0Red: 'RED', ColorF1Green: 'GREEN', ColorF2Yellow: 'YELLOW', ColorF3Blue: 'BLUE',
     ChannelUp: 'CH_UP', ChannelDown: 'CH_DOWN', MediaPlayPause: 'PLAYPAUSE', MediaPlay: 'PLAY',
-    MediaPause: 'PAUSE', MediaStop: 'STOP', Info: 'INFO', PreviousChannel: 'PREV_CH', ChannelList: 'CH_LIST'
+    MediaPause: 'PAUSE', MediaStop: 'STOP', Info: 'INFO', Guide: 'GUIDE', PreviousChannel: 'PREV_CH', ChannelList: 'CH_LIST'
   };
 
   U.registerKeys = function () {
@@ -118,6 +118,7 @@
     if (c === 89) { return 'YELLOW'; }                          // y
     if (c === 66) { return 'BLUE'; }                            // b
     if (c === 73) { return 'INFO'; }                            // i
+    if (c === 69) { return 'GUIDE'; }                           // e (EPG)
     if (c === 32) { return 'PLAYPAUSE'; }                       // space
     return null;
   };
