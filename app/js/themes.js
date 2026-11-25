@@ -82,6 +82,13 @@
     rule('.r-logo', 'background: ' + t.logoBg + ';');
     rule('.tag', 'background: ' + t.tagBg + '; color: ' + t.tagText + ';');
     rule('#scrollbar', 'background: ' + t.track + ';');
+    // programme guide
+    rule('.r-now, .e-time, .e-label, #e-desc, #b-now-time, #b-next', 'color: ' + t.dim + ';');
+    rule('.panel.active .row.sel .r-now', 'color: ' + t.onAccentDim + ';');
+    rule('.e-title, #b-now-title', 'color: ' + t.strong + ';');
+    rule('.e-next .e-title', 'color: ' + t.text + ';');
+    rule('.e-bar, .b-bar', 'background: ' + t.selIdle + ';');
+    rule('.e-fill, #b-fill', 'background: ' + t.accent + ';');
     // thin edge around panels (black themes); inset so the layout doesn't move
     rule('.panel, #info', t.edge ? '-webkit-box-shadow: inset 0 0 0 2px ' + t.edge + '; box-shadow: inset 0 0 0 2px ' + t.edge + ';' :
       '-webkit-box-shadow: none; box-shadow: none;');

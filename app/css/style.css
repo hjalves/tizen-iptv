@@ -68,6 +68,10 @@ body.fullscreen #browser { display: none; }
 .r-logo img { max-width: 96px; max-height: 50px; margin-top: 4px; }
 .r-initials { position: absolute; left: 0; top: 14px; width: 104px; text-align: center; font-size: 24px; font-weight: bold; color: #5d6a82; }
 .r-name { position: absolute; left: 222px; top: 18px; right: 110px; overflow: hidden; text-overflow: ellipsis; }
+/* with a programme guide entry: name on top, programme underneath */
+.row.has-epg .r-name { top: 6px; }
+.r-now { display: none; position: absolute; left: 222px; top: 42px; right: 110px; font-size: 21px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row.has-epg .r-now { display: block; }
 .r-tags { position: absolute; right: 12px; top: 20px; font-size: 22px; }
 
 .tag { display: inline-block; padding: 2px 8px; margin-left: 6px; border-radius: 4px; font-size: 20px; font-weight: bold; background: #2a3550; color: #c9d3e6; }
@@ -87,12 +91,22 @@ body.playing #preview { background: transparent; }
 #preview-art img { max-width: 360px; max-height: 200px; margin-top: 69px; }
 #preview-msg { position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 18px; font-size: 24px; background: rgba(0, 0, 0, 0.65); display: none; }
 
-#info { position: absolute; left: 0; top: 362px; width: 600px; height: 478px; background: #121826; border-radius: 10px; }
+#info { position: absolute; left: 0; top: 362px; width: 600px; height: 478px; background: #121826; border-radius: 10px; overflow: hidden; }
 #info-num, #info-name, #info-group, #info-tags { position: relative; margin: 0 30px; }
 #info-num { padding-top: 26px; font-size: 26px; color: #2f9bff; font-weight: bold; height: 34px; }
 #info-name { margin-top: 10px; font-size: 42px; font-weight: bold; line-height: 52px; max-height: 156px; overflow: hidden; }
 #info-group { margin-top: 12px; font-size: 26px; color: #8c97ab; }
 #info-tags { margin: 22px 24px 0 24px; }
+#info-epg { display: none; position: relative; margin: 20px 30px 0 30px; }
+.e-row { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.e-time { font-size: 24px; margin-right: 12px; }
+.e-title { font-size: 28px; font-weight: bold; }
+.e-bar { height: 6px; margin: 10px 0 12px 0; border-radius: 3px; overflow: hidden; }
+.e-fill { height: 6px; width: 0; }
+#e-desc { font-size: 22px; line-height: 30px; max-height: 90px; overflow: hidden; }
+.e-next { margin-top: 14px; }
+.e-next .e-title { font-size: 24px; font-weight: normal; }
+.e-label { font-size: 20px; text-transform: uppercase; letter-spacing: 1px; margin-right: 12px; }
 #info-help { position: absolute; left: 30px; bottom: 26px; right: 30px; font-size: 22px; color: #5d6a82; line-height: 30px; }
 
 #footer { position: absolute; left: 60px; top: 990px; width: 1800px; height: 50px; font-size: 24px; color: #8c97ab; white-space: nowrap; }
@@ -119,6 +133,17 @@ body.fullscreen.radio #radio-art { display: block; }
 #banner-text { position: absolute; left: 410px; top: 30px; right: 520px; }
 #banner-name { font-size: 50px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #banner-sub { margin-top: 10px; font-size: 28px; color: #8c97ab; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#banner-epg { display: none; margin-top: 12px; }
+#banner.has-epg { height: 250px; }
+#banner.has-epg #banner-epg { display: block; }
+#banner.has-epg #banner-num { top: 92px; }
+#banner.has-epg #banner-logo { top: 66px; }
+.b-row { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 30px; }
+#b-now-time { margin-right: 14px; }
+#b-now-title { font-weight: bold; }
+.b-bar { height: 6px; width: 700px; margin: 8px 0 6px 0; border-radius: 3px; overflow: hidden; }
+#b-fill { height: 6px; width: 0; }
+#b-next { font-size: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #banner-msg { position: absolute; right: 36px; top: 30px; width: 470px; text-align: right; font-size: 28px; color: #c9d3e6; line-height: 38px; }
 
 #numentry {

@@ -4,7 +4,8 @@
 
   var U = global.U, M3U = global.M3U, Player = global.Player, Themes = global.Themes, KEY = U.KEY, $ = U.$;
 
-  var PLAYLIST_URL = 'https://raw.githubusercontent.com/LITUATUI/M3UPT/main/M3U/M3UPT.m3u';
+  // m3upt.com/iptv redirects to the M3UPT repo's M3U/M3UPT.m3u
+  var PLAYLIST_URL = (global.SETTINGS && global.SETTINGS.playlistUrl) || 'https://m3upt.com/iptv';
   var BUNDLED_URL = 'data/M3UPT.m3u';
   var LOGO_PREFIX = 'https://raw.githubusercontent.com/LITUATUI/M3UPT/main/logos/';
   var GROUP_ALL = 'All channels', GROUP_FAV = 'Favourites';
@@ -80,12 +81,12 @@
       r.className = 'row';
       r.style.top = (i * CH_ROW_H) + 'px';
       r.innerHTML = '<span class="r-num"></span><span class="r-logo"><img alt=""><span class="r-initials"></span></span>' +
-        '<span class="r-name"></span><span class="r-tags"></span>';
+        '<span class="r-name"></span><span class="r-now"></span><span class="r-tags"></span>';
       cWrap.appendChild(r);
       img = r.childNodes[1].childNodes[0];
       img._fallback = r.childNodes[1].childNodes[1];
       img.onerror = logoError;
-      cRows.push({ el: r, num: r.childNodes[0], img: img, initials: img._fallback, name: r.childNodes[2], tags: r.childNodes[3], ch: null });
+      cRows.push({ el: r, num: r.childNodes[0], img: img, initials: img._fallback, name: r.childNodes[2], now: r.childNodes[3], tags: r.childNodes[4], ch: null });
     }
     $('preview-logo').onerror = logoError;
     $('banner-img').onerror = logoError;
@@ -134,6 +135,7 @@
       $('loading').className = '';
       playlistSource = source;
       renderAll();
+      EPG.update(all, forceNetwork ? 3600000 : 0);    // Green also refreshes a guide older than 1 h
       return true;
     }
 
@@ -203,7 +205,7 @@
     if (favs[ch.key]) { h += '<span class="tag fav">★' + (big ? ' Favourite' : '') + '</span>'; }
     if (ch.radio) { h += '<span class="tag radio">' + (big ? 'Radio' : 'R') + '</span>'; }
     if (ch.drmType) {
-      h += Player.canDecrypt(ch) ? '<span class="tag">' + (big ? 'ClearKey (decrypted here)' : 'CK') + '</span>' :
+      h += Player.canDecrypt(ch) ? '<span class="tag">' + (big ? 'ClearKey' : 'CK') + '</span>' :
         '<span class="tag drm">' + (big ? 'DRM — not playable' : 'DRM') + '</span>';
     }
     if (big && /\.mpd(\?|$)/i.test(ch.url)) { h += '<span class="tag">DASH</span>'; }
@@ -230,6 +232,9 @@
         setLogo(row.img, ch, row.initials);
       }
       row.tags.innerHTML = tagsHtml(ch, false);
+      var nn = EPG.nowNext(ch.tvgId), nowTitle = nn && nn.now ? nn.now[2] : '';
+      U.text(row.now, nowTitle);
+      U.toggleClass(row.el, 'has-epg', !!nowTitle);
       U.toggleClass(row.el, 'sel', cTop + i === cSel);
       U.toggleClass(row.el, 'playing', ch === playing);
     }
@@ -251,6 +256,7 @@
     if (!ch) {
       U.text($('info-num'), ''); U.text($('info-name'), ''); U.text($('info-group'), '');
       $('info-tags').innerHTML = '';
+      renderGuide(null);
       setLogo($('preview-logo'), null);
       return;
     }
@@ -258,12 +264,40 @@
     U.text($('info-name'), ch.name);
     U.text($('info-group'), ch.group);
     $('info-tags').innerHTML = tagsHtml(ch, true);
+    renderGuide(ch);
     // Artwork behind the preview: the playing channel's logo (radio) or the focused one when idle.
     var art = playing ? playing : ch;
     var showArt = !playing || playing.radio || playState !== 'playing';
     setLogo($('preview-logo'), art);
     $('preview-art').style.visibility = showArt ? 'visible' : 'hidden';
     renderPlayMsg();
+  }
+
+  /* Now / next for the details panel. */
+  function progressPct(p, t) { return Math.max(0, Math.min(100, Math.round(100 * (t - p[0]) / (p[1] - p[0])))); }
+  function renderGuide(ch) {
+    var nn = ch ? EPG.nowNext(ch.tvgId) : null, box = $('info-epg'), t = Math.floor(new Date().getTime() / 1000);
+    var has = !!(nn && (nn.now || nn.next));
+    box.style.display = has ? 'block' : 'none';
+    $('info-help').style.display = has ? 'none' : 'block';
+    if (!has) { return; }
+    var now = nn.now, next = nn.next;
+    U.text($('e-now-time'), now ? EPG.hhmm(now[0]) + '–' + EPG.hhmm(now[1]) : '');
+    U.text($('e-now-title'), now ? now[2] : 'No programme information');
+    $('e-bar').style.display = now ? 'block' : 'none';
+    if (now) { $('e-fill').style.width = progressPct(now, t) + '%'; }
+    U.text($('e-desc'), now ? now[3] : '');
+    U.text($('e-next-time'), next ? EPG.hhmm(next[0]) : '');
+    U.text($('e-next-title'), next ? next[2] : '');
+    $('e-next').style.display = next ? 'block' : 'none';
+  }
+
+  function guideStatus() {
+    var st = EPG.state();
+    if (st === 'loading') { return ' · guide: loading…'; }
+    if (st === 'failed') { return ' · guide unavailable'; }
+    if (st === 'ready') { return ' · guide: ' + EPG.channelCount() + ' channels'; }
+    return '';
   }
 
   function stateText() {
@@ -293,7 +327,7 @@
       if (!seen[gname]) { seen[gname] = 1; if (hidden[gname]) { nHidden++; } else { nGroups++; } }
     }
     U.text($('status'), visible.length + ' channels · ' + nGroups + (nGroups === 1 ? ' group' : ' groups') + (nHidden ? ' (+' + nHidden + ' hidden)' : '') +
-      ' · ' + playlistSource + ' · player: ' + (Player.engine === 'avplay' ? 'AVPlay' : 'HTML5'));
+      ' · ' + playlistSource + guideStatus() + ' · player: ' + (Player.engine === 'avplay' ? 'AVPlay' : 'HTML5'));
   }
 
   function renderAll() { clampScroll(); renderStatus(); renderGroups(); renderChannels(); renderDetails(); }
@@ -382,11 +416,17 @@
     var list = zapList || visible, idx = list.indexOf(ch);
     U.text($('banner-sub'), ch.group + (idx >= 0 ? '   ·   ' + (idx + 1) + ' of ' + list.length : '') +
       (favs[ch.key] ? '   ·   ★' : ''));
+    var nn = EPG.nowNext(ch.tvgId), t = Math.floor(new Date().getTime() / 1000);
+    U.toggleClass($('banner'), 'has-epg', !!(nn && (nn.now || nn.next)));
+    U.text($('b-now-time'), nn && nn.now ? EPG.hhmm(nn.now[0]) + '–' + EPG.hhmm(nn.now[1]) : '');
+    U.text($('b-now-title'), nn && nn.now ? nn.now[2] : '');
+    $('b-fill').style.width = nn && nn.now ? progressPct(nn.now, t) + '%' : '0';
+    U.text($('b-next'), nn && nn.next ? 'Next  ' + EPG.hhmm(nn.next[0]) + '  ' + nn.next[2] : '');
     setLogo($('banner-img'), ch);
     setLogo($('radio-logo'), ch);
     U.text($('radio-name'), ch.radio ? ch.name : '');
     renderPlayMsg();
-    $('banner').className = 'show';
+    U.addClass($('banner'), 'show');
     clearTimeout(bannerTimer);
     if (autoHide) {
       bannerTimer = setTimeout(function () {
@@ -395,7 +435,7 @@
       }, 5000);
     }
   }
-  function hideBanner() { clearTimeout(bannerTimer); $('banner').className = ''; }
+  function hideBanner() { clearTimeout(bannerTimer); U.removeClass($('banner'), 'show'); }
 
   function toast(msg) {
     var t = $('toast');
@@ -618,9 +658,16 @@
   }
 
   /* ---------- clock ---------- */
+  var lastMinute = -1;
   function tick() {
     var d = new Date();
     U.text($('clock'), U.pad2(d.getHours()) + ':' + U.pad2(d.getMinutes()));
+    var minute = Math.floor(new Date().getTime() / 60000);
+    if (minute !== lastMinute && all.length) {        // now/next and progress move on
+      lastMinute = minute;
+      renderChannels(); renderDetails();
+      if (U.hasClass($('banner'), 'show')) { showBanner(false); }
+    }
   }
 
   /* ---------- start ---------- */
@@ -640,6 +687,11 @@
     }, false);
     tick();
     setInterval(tick, 10000);
+    EPG.onChange(function () {
+      if (!all.length) { return; }
+      renderStatus(); renderChannels(); renderDetails();
+      if (U.hasClass($('banner'), 'show')) { showBanner(false); }
+    });
     loadPlaylist(false);
   }
 

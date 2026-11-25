@@ -6,7 +6,7 @@
     "test": "test"
   },
   "scripts": {
-    "test": "node test/es5-check.js && node test/m3u.test.js && node test/cenc.test.js && node test/ui.test.js",
+    "test": "node test/es5-check.js && node test/m3u.test.js && node test/cenc.test.js && node test/epg.test.js && node test/ui.test.js",
     "build": "tools/build.sh",
     "test:online": "node test/clearkey.online.js"
   },

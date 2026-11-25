@@ -30,19 +30,42 @@ var MOCK = function () {
   var p = await b.newPage({ viewport: { width: 1920, height: 1080 } });
   var errors = []; p.on('pageerror', function (e) { errors.push(e.message); });
   await p.addInitScript(MOCK);
+  // Serve a small generated guide (around the current time) in place of m3upt.com/epg.
+  var zlib = require('zlib');
+  function xt(ms) { var d = new Date(ms), p = function (n) { return (n < 10 ? '0' : '') + n; };
+    return d.getUTCFullYear() + p(d.getUTCMonth() + 1) + p(d.getUTCDate()) + p(d.getUTCHours()) + p(d.getUTCMinutes()) + '00 +0000'; }
+  var nowMs = Date.now(), H = 3600000;
+  var epgXml = '<?xml version="1.0" encoding="UTF-8"?><tv>' +
+    '<programme start="' + xt(nowMs - H / 2) + '" stop="' + xt(nowMs + H / 2) + '" channel="RTP1.pt"><title>Telejornal</title><desc>Notícias do dia, com a atualidade nacional e internacional.</desc></programme>' +
+    '<programme start="' + xt(nowMs + H / 2) + '" stop="' + xt(nowMs + 2 * H) + '" channel="RTP1.pt"><title>Prós e Contras</title></programme>' +
+    '<programme start="' + xt(nowMs - H) + '" stop="' + xt(nowMs + H) + '" channel="TVI.pt"><title>Big Brother</title></programme></tv>';
+  await p.route('https://m3upt.com/epg', function (route) {
+    route.fulfill({ status: 200, contentType: 'application/octet-stream', headers: { 'Access-Control-Allow-Origin': '*' }, body: zlib.gzipSync(Buffer.from(epgXml, 'utf8')) });
+  });
   // Serve the bundled playlist instead of the live one so counts don't change with upstream edits.
-  await p.route('https://raw.githubusercontent.com/LITUATUI/M3UPT/main/M3U/M3UPT.m3u', function (route) {
-    route.fulfill({ status: 200, contentType: 'text/plain; charset=utf-8', body: fs.readFileSync(path.join(root, 'data/M3UPT.m3u')) });
+  await p.route('https://m3upt.com/iptv', function (route) {
+    route.fulfill({ status: 200, contentType: 'text/plain; charset=utf-8', headers: { 'Access-Control-Allow-Origin': '*' }, body: fs.readFileSync(path.join(root, 'data/M3UPT.m3u')) });
   });
   await p.goto('http://127.0.0.1:8765/index.html');
   await p.waitForFunction(function () { return App._state().all.length > 0; }, null, { timeout: 30000 });
   await p.waitForTimeout(1500);
   var s = await p.evaluate(function () { var s = App._state(); return { n: s.all.length, groups: s.groups.map(function (g) { return g.name + ':' + g.items.length; }), status: document.getElementById('status').textContent }; });
   console.log(JSON.stringify(s));
+  await p.waitForFunction(function () { return EPG.state() === 'ready'; }, null, { timeout: 20000 });
+  await p.waitForTimeout(300);
+  var g = await p.evaluate(function () { return { row: document.querySelector('#channel-rows .row .r-now').textContent,
+    now: document.getElementById('e-now-title').textContent, next: document.getElementById('e-next-title').textContent,
+    fill: document.getElementById('e-fill').style.width, status: document.getElementById('status').textContent }; });
+  if (g.row !== 'Telejornal' || g.now !== 'Telejornal' || g.next !== 'Prós e Contras' || !/^(4\d|5\d)%$/.test(g.fill) || g.status.indexOf('guide: 2 channels') < 0) {
+    throw new Error('EPG not shown as expected: ' + JSON.stringify(g)); }
+  console.log('epg UI OK: ' + JSON.stringify(g));
   await p.screenshot({ path: shots + '/1-browser.png' });
   var key = async function (k, n) { for (var i = 0; i < (n || 1); i++) { await p.keyboard.press(k); await p.waitForTimeout(120); } };
   await key('ArrowDown', 3); await key('Enter'); await p.waitForTimeout(800);       // RTP Notícias? -> fullscreen
   await p.screenshot({ path: shots + '/2-fullscreen.png' });
+  var bn = await p.evaluate(function () { return [document.getElementById('banner').className, document.getElementById('b-now-title').textContent]; });
+  if (bn[0].indexOf('has-epg') < 0 || bn[1] !== 'Big Brother') { throw new Error('banner without guide info: ' + bn); }
+  console.log('epg banner OK: ' + bn[1]);
   await key('PageUp'); await p.waitForTimeout(1200);                                // zap: CH+ → next channel
   var afterZap = await p.evaluate(function () { return App._state().playing.num; });
   if (afterZap !== 5) { throw new Error('CH+ from channel 4 should play channel 5, got ' + afterZap); }
